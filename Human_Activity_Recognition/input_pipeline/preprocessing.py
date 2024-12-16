@@ -9,7 +9,7 @@ def preprocess(data):
     mean = tf.reduce_mean(data, axis = 0)
     std = tf.math.reduce_std(data, axis = 0)
 
-    return mean, std
+    return (data - mean)/ std
 
 augmentation_layer = tf.keras.Sequential([
         tf.keras.layers.RandomRotation(factor=0.2),  # Approximately ±10 degrees,

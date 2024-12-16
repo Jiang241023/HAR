@@ -23,12 +23,10 @@ Trainer.total_epochs = 10
 Trainer.learning_rate = 1e-4
 
 # Input pipeline
-load.name = 'idrid'
-load.data_dir = '/home/RUS_CIP/st186731/augmented_images/train'
+load.name = 'HAPT'
+load.data_dir = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData'
 load.test_data_dir = '/home/RUS_CIP/st186731/revized_images/test/binary'
 load.batch_size = 16
-preprocess.img_height = 256
-preprocess.img_width = 256
 prepare.caching = True
 
 train_model.unfrz_layer = 9
