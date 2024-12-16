@@ -9,16 +9,22 @@ import numpy as np
 import os
 
 def cal_exp_lengths(data_path, file_prefix ='acc_exp', file_suffix=".txt"):
+    """
+    Calculate the number of rows for each experiment file and return the cumulative lengths.
+    """
     exp_length =[0]
     filenames = sorted(os.listdir(data_path))
     for file in filenames:
         if file.startswith(file_prefix) and file.endswith(file_suffix):
-            file_path = os.path.join(data_path,file)
+            file_path = os.path.join(data_path, file)
             num_rows = np.loadtxt(file_path).shape[0]
             exp_length.append(num_rows)
     return exp_length
 
 def parse_labels(label_file_path, exp_lengths):
+    """
+    Parse the label file and adjust the activity start and end indices based on cumulative experiment lengths.
+    """
     segments =[]
     cumulative_offset = 0
     current_experiment_id = -1
@@ -46,6 +52,9 @@ def parse_labels(label_file_path, exp_lengths):
     return segments
 
 def create_label_tensor(segments, total_time_steps):
+    """
+    Generate a label tensor for all time steps based on parsed activity segments.
+    """
     label_tensor = np.zeros(total_time_steps, dtype=int)
     for segment in segments:
       activity_id = segment["activity_id"]
@@ -57,6 +66,7 @@ def create_label_tensor(segments, total_time_steps):
     return label_tensor
 
 def sliding_window(data, labels, window_size=128, overlap = 0.5):
+
     # Convert data and labels into tf.data.Dataset object
     step_size = int(window_size*(1 - overlap))
     data_ds = tf.data.Dataset.from_tensor_slices(data)
@@ -69,12 +79,13 @@ def sliding_window(data, labels, window_size=128, overlap = 0.5):
     dataset = dataset.window(size=window_size, shift=step_size, drop_remainder=True)
 
     # Flatten the dataset and batch into windows
-    def create_windowed_dataset(window_data, window_labels):
+    def create_windowed_dataset(data_ds, labels_ds):
         # Batch the windowed data and labels, return as zipped Dataset
-        windowed_data = window_data.batch(window_size, drop_remainder=True)
-        windowed_labels = window_labels.batch(window_size, drop_remainder=True)
+        windowed_data = data_ds.batch(window_size, drop_remainder=True)
+        windowed_labels = labels_ds.batch(window_size, drop_remainder=True)
         return tf.data.Dataset.zip((windowed_data, windowed_labels))
 
+    # Process each element of the nested data using the create_windowed_dataset function
     dataset = dataset.flat_map(create_windowed_dataset)
 
     # Calculate the most frequent label
