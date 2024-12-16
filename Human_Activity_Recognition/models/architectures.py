@@ -5,20 +5,8 @@ from models.layers import vgg_block, mobilenet_block, InceptionResNetV2_block
 from tensorflow.keras.regularizers import l2
 
 @gin.configurable
-def vgg_like(n_classes, base_filters, n_blocks, dense_units, dropout_rate, input_shape = (256, 256, 3) ):
-    """Defines a VGG-like architecture.
+def vgg_like(n_classes, base_filters, n_blocks, dense_units, dropout_rate, input_shape = (256, 256, 3)):
 
-    Parameters:
-        input_shape (tuple: 3): input shape of the neural network
-        n_classes (int): number of classes, corresponding to the number of output neurons
-        base_filters (int): number of base filters, which are doubled for every VGG block
-        n_blocks (int): number of VGG blocks
-        dense_units (int): number of dense units
-        dropout_rate (float): dropout rate
-
-    Returns:
-        (keras.Model): keras model object
-    """
     #Load the pretrained VGG16 model excluding the top classification layer
     base_model = VGG16(include_top=False, weights='imagenet', input_shape=input_shape)
     base_model.trainable = False
