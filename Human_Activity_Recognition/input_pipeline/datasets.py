@@ -2,9 +2,6 @@ import gin
 from tensorflow.data.experimental import AUTOTUNE
 import tensorflow as tf
 import logging
-
-from textdistance import overlap
-
 from input_pipeline.preprocessing import preprocess, augment
 import tensorflow_datasets as tfds
 from tensorflow.keras.utils import image_dataset_from_directory
