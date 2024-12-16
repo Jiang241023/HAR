@@ -201,26 +201,18 @@ label_tensor = create_label_tensor(segments, total_time_steps)
 print("Label tensor shape :", label_tensor.shape)
 print("Fist 50 labels",label_tensor[250:300])
 
-sliding_window_data_ds_train = sliding_window(ds_train, label_tensor, window_size=128, overlap = 0.5)
-# sliding_window_data_ds_val = sliding_window(ds_val , label_tensor, window_size=128, overlap = 0.5)
-# sliding_window_data_ds_test = sliding_window(ds_test, label_tensor, window_size=128, overlap = 0.5)
 
-for window_data, window_labels in sliding_window_data_ds_train.take(10):
-    print("Window Data Shape: ", window_data.shape)
-    print("Window Labels Shape :", window_labels.shape)
-    print("Window Labels : ",window_labels.numpy())
-    print("="*50)
-
-# for window_data, window_labels in sliding_window_data_ds_val.take(10):
-#     print("Window Data Shape: ", window_data.shape)
-#     print("Window Labels Shape :", window_labels.shape)
-#     print("Window Labels : ",window_labels.numpy())
-#     print("="*50)
-#
-# for window_data, window_labels in sliding_window_data_ds_test.take(10):
-#     print("Window Data Shape: ", window_data.shape)
-#     print("Window Labels Shape :", window_labels.shape)
-#     print("Window Labels : ",window_labels.numpy())
-#     print("="*50)
+datasets = [
+    ("train", sliding_window(ds_train, label_tensor, window_size=128, overlap = 0.5)),
+    ("val", sliding_window(ds_train, label_tensor, window_size=128, overlap = 0.5)),
+    ("test", sliding_window(ds_train, label_tensor, window_size=128, overlap = 0.5))
+    ]
+for name, dataset in datasets:
+    print(f"Processing the dataset of {name}...")
+    for window_data, window_labels in dataset.take(10):
+        print("Window Data Shape: ", window_data.shape)
+        print("Window Labels Shape :", window_labels.shape)
+        print("Window Labels : ",window_labels.numpy())
+        print("="*50)
 
 
