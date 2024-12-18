@@ -6,7 +6,7 @@ from train import Trainer
 from evaluation.eval import evaluate
 from input_pipeline import datasets
 from utils import utils_params, utils_misc
-from models.architectures import mobilenet_like, vgg_like, inception_v2_like
+from models.architectures import lstm_like
 import tensorflow as tf
 from deep_visualization.GRAD_CAM_visualization import grad_cam_visualization
 import random
@@ -33,10 +33,10 @@ def train_model(model, base_model, ds_train, ds_val, num_batches, unfrz_layer, d
         print(layer.name, layer.trainable)
     for _ in trainer.train():
         continue
-    for layer in base_model.layers[-unfrz_layer:]:
-        layer.trainable = True
-    for _ in trainer.train():
-        continue
+    # for layer in base_model.layers[-unfrz_layer:]:
+    #     layer.trainable = True
+    # for _ in trainer.train():
+    #     continue
     print(f"Training checkpoint path for {path_model_id}: {run_paths['path_ckpts_train']}")
     print(f'Training completed for {path_model_id}')
     print('-' * 88)
@@ -45,30 +45,30 @@ def main(argv):
 
     # generate folder structures
     run_paths_1 = utils_params.gen_run_folder(path_model_id = 'mobilenet_like')
-    run_paths_2 = utils_params.gen_run_folder(path_model_id = 'vgg_like')
-    run_paths_3 = utils_params.gen_run_folder(path_model_id = 'inception_v2_like')
+    # run_paths_2 = utils_params.gen_run_folder(path_model_id = 'vgg_like')
+    # run_paths_3 = utils_params.gen_run_folder(path_model_id = 'inception_v2_like')
 
     # set loggers
     utils_misc.set_loggers(run_paths_1['path_logs_train'], logging.INFO)
-    utils_misc.set_loggers(run_paths_2['path_logs_train'], logging.INFO)
-    utils_misc.set_loggers(run_paths_3['path_logs_train'], logging.INFO)
+    # utils_misc.set_loggers(run_paths_2['path_logs_train'], logging.INFO)
+    # utils_misc.set_loggers(run_paths_3['path_logs_train'], logging.INFO)
 
     # gin-config
-    gin.parse_config_files_and_bindings(['/home/RUS_CIP/st186731/dl-lab-24w-team04/diabetic_retinopathy/configs/config.gin'], [])
+    gin.parse_config_files_and_bindings(['/configs/config.gin'], [])
     utils_params.save_config(run_paths_1['path_gin'], gin.config_str())
-    utils_params.save_config(run_paths_2['path_gin'], gin.config_str())
-    utils_params.save_config(run_paths_3['path_gin'], gin.config_str())
+    # utils_params.save_config(run_paths_2['path_gin'], gin.config_str())
+    # utils_params.save_config(run_paths_3['path_gin'], gin.config_str())
 
     # setup pipeline
-    ds_train, ds_val, ds_test, ds_info, num_batches = datasets.load(name = 'idrid')
+    ds_train, ds_val, ds_test = datasets.load(name = 'idrid')
 
      # model
-    model_1, base_model_1 = mobilenet_like(input_shape=ds_info["features"]["image"]["shape"],
-                                           n_classes=ds_info["features"]["label"]["num_classes"])
-    model_2, base_model_2 = vgg_like(input_shape=ds_info["features"]["image"]["shape"],
-                                       n_classes=ds_info["features"]["label"]["num_classes"])
-    model_3, base_model_3 = inception_v2_like(input_shape=ds_info["features"]["image"]["shape"],
-                                       n_classes=ds_info["features"]["label"]["num_classes"])
+    model_1, base_model_1 = lstm_like(input_shape=(128, 6),
+                                           n_classes=13)
+    # model_2, base_model_2 = vgg_like(input_shape=ds_info["features"]["image"]["shape"],
+    #                                    n_classes=ds_info["features"]["label"]["num_classes"])
+    # model_3, base_model_3 = inception_v2_like(input_shape=ds_info["features"]["image"]["shape"],
+    #                                    n_classes=ds_info["features"]["label"]["num_classes"])
 
     if FLAGS.train:
 
