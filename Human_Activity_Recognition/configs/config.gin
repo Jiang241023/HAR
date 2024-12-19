@@ -1,34 +1,22 @@
 # Architectures
-mobilenet_like.base_filters = 21
-mobilenet_like.n_blocks = 2
-mobilenet_like.dense_units = 243
-mobilenet_like.dropout_rate =  0.4983837360281846
+lstm_like.lstm_units = 64
+lstm_like.n_blocks = 2
+lstm_like.dense_units = 128
 
-vgg_like.base_filters = 14
-vgg_like.n_blocks = 1
-vgg_like.dense_units = 70
-vgg_like.dropout_rate = 0.2372860650923091
-
-inception_v2_like.base_filters = 92
-inception_v2_like.n_blocks = 1
-inception_v2_like.dense_units = 52
-inception_v2_like.dropout_rate = 0.5411492756224314
 
 # Layers
-layers.vgg_block.kernel_size = (3, 3)
-layers.mobilenet_block.strides = 1
+layers.lstm_block.lstm_units = 64
+layers.lstm_block.dropout_rate = 0.5
 
 # Training
 Trainer.total_epochs = 10
 Trainer.learning_rate = 1e-4
 
 # Input pipeline
-load.name = 'idrid'
-load.data_dir = '/home/RUS_CIP/st186731/augmented_images/train'
+load.name = 'HAPT'
+load.data_dir = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData'
 load.test_data_dir = '/home/RUS_CIP/st186731/revized_images/test/binary'
 load.batch_size = 16
-preprocess.img_height = 256
-preprocess.img_width = 256
 prepare.caching = True
 
 train_model.unfrz_layer = 9
