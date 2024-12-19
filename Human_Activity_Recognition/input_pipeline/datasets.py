@@ -101,9 +101,8 @@ def sliding_window(data, labels, window_size=128, overlap = 0.5):
 
     return dataset
 
-
 @gin.configurable
-def load(data_dir, name):
+def load(name, data_dir, labels_file):
     if name == "HAPT":
         logging.info(f"Preparing dataset {name}...")
 
@@ -160,7 +159,6 @@ def load(data_dir, name):
     # Calculate cumulative lengths for splitting
     train_length = ds_train.shape[0]
     val_length = ds_val.shape[0]
-    test_length = ds_test.shape[0]
 
     # Split label_tensor
     train_labels = label_tensor[:train_length]
@@ -168,13 +166,13 @@ def load(data_dir, name):
     test_labels = label_tensor[train_length + val_length:]
 
     # Prepare
-    ds_train, ds_val, ds_test = prepare(ds_train, ds_val, ds_test)
+    ds_train, ds_val, ds_test = prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels)
 
-    return ds_train, ds_val, ds_test, train_labels, val_labels, test_labels
+    return ds_train, ds_val, ds_test
 
 
 @gin.configurable
-def prepare(ds_train, ds_val, ds_test, ds_info=None, caching=True):
+def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, ds_info=None, caching=True):
     """Prepare datasets with preprocessing, batching, caching, and prefetching"""
     ds_train = tf.data.Dataset.from_tensor_slices(ds_train)
     ds_val = tf.data.Dataset.from_tensor_slices(ds_val)
@@ -182,6 +180,7 @@ def prepare(ds_train, ds_val, ds_test, ds_info=None, caching=True):
 
     # Prepare training dataset
     ds_train = ds_train.map(preprocess, num_parallel_calls=tf.data.AUTOTUNE)
+    ds_train = sliding_window(ds_train, train_labels, window_size=128, overlap=0.5)
     if caching:
         ds_train = ds_train.cache()
 
@@ -195,13 +194,15 @@ def prepare(ds_train, ds_val, ds_test, ds_info=None, caching=True):
 
     # Prepare validation dataset (no augmentation)
     ds_val = ds_val.map(preprocess, num_parallel_calls=tf.data.AUTOTUNE)
+    ds_val = sliding_window(ds_val, val_labels, window_size=128, overlap=0.5)
     if caching:
         ds_val = ds_val.cache()
     ds_val = ds_val.prefetch(tf.data.AUTOTUNE)
 
-    # Prepare test dataset if available (no augmentation)
+    # Prepare test dataset if available
     if ds_test is not None:
         ds_test = ds_test.map(preprocess, num_parallel_calls=tf.data.AUTOTUNE)
+        ds_test = sliding_window(ds_test, test_labels, window_size=128, overlap=0.5)
         if caching:
             ds_test = ds_test.cache()
         ds_test = ds_test.prefetch(tf.data.AUTOTUNE)
@@ -212,12 +213,12 @@ data_dir = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData'
 labels_file = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData\labels.txt'
 name = "HAPT"
 
-ds_train, ds_val, ds_test, train_labels, val_labels, test_labels = load(data_dir, name)
+ds_train, ds_val, ds_test = load(name, data_dir, labels_file)
 
 datasets = [
-    ("train", sliding_window(ds_train, train_labels, window_size=128, overlap = 0.5)),
-    ("val", sliding_window(ds_val, val_labels, window_size=128, overlap = 0.5)),
-    ("test", sliding_window(ds_test, test_labels, window_size=128, overlap = 0.5))
+    ("train", ds_train),
+    ("val", ds_val),
+    ("test", ds_test)
     ]
 
 for name, dataset in datasets:
