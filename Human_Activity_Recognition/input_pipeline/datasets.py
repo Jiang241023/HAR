@@ -171,16 +171,13 @@ def load(batch_size, name, data_dir, labels_file):
     print(f"test_labels:{test_labels}")
     print(f"val_labels:{val_labels}")
     # Prepare
-    ds_train, ds_val, ds_test = prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels)
-    ds_train = ds_train.batch(batch_size=batch_size)
-    ds_val = ds_val.batch(batch_size=batch_size)
-    ds_test = ds_test.batch(batch_size=batch_size)
+    ds_train, ds_val, ds_test = prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, batch_size)
 
     return ds_train, ds_val, ds_test, batch_size
 
 
 @gin.configurable
-def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, ds_info=None, caching=True):
+def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, batch_size, ds_info=None, caching=True):
     """Prepare datasets with preprocessing, batching, caching, and prefetching"""
     ds_train = tf.data.Dataset.from_tensor_slices(ds_train)
     ds_val = tf.data.Dataset.from_tensor_slices(ds_val)
@@ -196,6 +193,7 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, ds
        shuffle_buffer_size = ds_info.get("num_examples", 1000) // 10  # Default to 1000 if ds_info not provided
        ds_train = ds_train.shuffle(shuffle_buffer_size)
     else:
+
         ds_train = ds_train.shuffle(1000)  # Fallback shuffle size
 
     ds_train = ds_train.batch(batch_size).repeat().prefetch(tf.data.AUTOTUNE)
@@ -205,7 +203,7 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, ds
     ds_val = sliding_window(ds_val, val_labels, window_size=128, overlap=0.5)
     if caching:
         ds_val = ds_val.cache()
-    ds_val = ds_val.prefetch(tf.data.AUTOTUNE)
+    ds_val = ds_val.batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
     # Prepare test dataset if available
     if ds_test is not None:
@@ -213,7 +211,7 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, ds
         ds_test = sliding_window(ds_test, test_labels, window_size=128, overlap=0.5)
         if caching:
             ds_test = ds_test.cache()
-        ds_test = ds_test.prefetch(tf.data.AUTOTUNE)
+        ds_test = ds_test.batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
     return ds_train, ds_val, ds_test
 
@@ -232,7 +230,7 @@ datasets = [
 
 for name, dataset in datasets:
     print(f"Processing the dataset of {name}...")
-    for window_data, window_labels in dataset.take(10):
+    for window_data, window_labels in dataset.take(1):
         print("Window Data Shape: ", window_data.shape)
         print("Window Labels Shape :", window_labels.shape)
         print("Window Labels : ",window_labels.numpy())
