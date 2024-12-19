@@ -4,7 +4,7 @@ import wandb
 from absl import app, flags
 from train import Trainer
 from evaluation.eval import evaluate
-from input_pipeline import datasets
+from input_pipeline.datasets import load
 from utils import utils_params, utils_misc
 from models.architectures import lstm_like
 import tensorflow as tf
@@ -24,11 +24,11 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean('train', True,'Specify whether to train or evaluate a model.')
 
 @gin.configurable
-def train_model(model, ds_train, ds_val, num_batches, ds_info, run_paths, path_model_id):
+def train_model(model, ds_train, ds_val, batch_size, run_paths, path_model_id):
     print('-' * 88)
     print(f'Starting training {path_model_id}')
     model.summary()
-    trainer = Trainer(model, ds_train, ds_val, ds_info, run_paths, num_batches)
+    trainer = Trainer(model, ds_train, ds_val, run_paths, batch_size)
     for layer in model.layers:
         print(layer.name, layer.trainable)
     for _ in trainer.train():
@@ -60,25 +60,17 @@ def main(argv):
     # utils_params.save_config(run_paths_3['path_gin'], gin.config_str())
 
     # setup pipeline
-    ds_train, ds_val, ds_test, train_labels, val_labels, test_labels = datasets.load()
+    ds_train, ds_val, ds_test, batch_size = load()
 
-    datasets = [
-        ("train", sliding_window(ds_train, train_labels, window_size=128, overlap=0.5)),
-        ("val", sliding_window(ds_val, val_labels, window_size=128, overlap=0.5)),
-        ("test", sliding_window(ds_test, test_labels, window_size=128, overlap=0.5))
-    ]
-
-    for name, dataset in datasets:
-        print(f"Processing the dataset of {name}...")
-        for window_data, window_labels in dataset.take(10):
-            print("Window Data Shape: ", window_data.shape)
-            print("Window Labels Shape :", window_labels.shape)
-            print("Window Labels : ", window_labels.numpy())
-            print("=" * 50)
-
-     # model
-    model_1, base_model_1 = lstm_like(input_shape=(128, 6),
-                                           n_classes=13)
+    # for name, dataset in datasets:
+    #     print(f"Processing the dataset of {name}...")
+    #     for window_data, window_labels in dataset.take(1):
+    #         print("Window Data Shape: ", window_data.shape)
+    #         print("Window Labels Shape :", window_labels.shape)
+    #         print("Window Labels : ", window_labels.numpy())
+    #         print("=" * 50)
+    # model
+    model_1 = lstm_like(input_shape=(128, 6), n_classes=13)
     # model_2, base_model_2 = vgg_like(input_shape=ds_info["features"]["image"]["shape"],
     #                                    n_classes=ds_info["features"]["label"]["num_classes"])
     # model_3, base_model_3 = inception_v2_like(input_shape=ds_info["features"]["image"]["shape"],
@@ -88,45 +80,43 @@ def main(argv):
     if FLAGS.train:
 
         # Model_1
-        wandb.init(project='diabetic-retinopathy-detection', name=run_paths_1['model_id'],
+        wandb.init(project='Human_Activity_Recognition', name=run_paths_1['model_id'],
                     config=utils_params.gin_config_to_readable_dictionary(gin.config._CONFIG))# setup wandb
 
         train_model(model = model_1,
-                    base_model = base_model_1,
                     ds_train = ds_train,
                     ds_val = ds_val,
-                    num_batches = num_batches,
-                    ds_info = ds_info,
+                    batch_size = batch_size,
                     run_paths = run_paths_1,
-                    path_model_id = 'mobilenet_like')
+                    path_model_id = 'lstm_like')
         wandb.finish()
 
-        # Model_2
-        wandb.init(project='diabetic-retinopathy-detection', name=run_paths_2['model_id'],
-                   config=utils_params.gin_config_to_readable_dictionary(gin.config._CONFIG))
-        train_model(model = model_2,
-                    base_model = base_model_2,
-                    ds_train = ds_train,
-                    ds_val = ds_val,
-                    num_batches = num_batches,
-                    ds_info = ds_info,
-                    run_paths = run_paths_2,
-                    path_model_id = 'vgg_like')
-        wandb.finish()
-
-
-        # Model_3
-        wandb.init(project='diabetic-retinopathy-detection', name=run_paths_3['model_id'],
-                   config=utils_params.gin_config_to_readable_dictionary(gin.config._CONFIG))
-        train_model(model = model_3,
-                    base_model = base_model_3,
-                    ds_train = ds_train,
-                    ds_val = ds_val,
-                    num_batches = num_batches,
-                    ds_info = ds_info,
-                    run_paths = run_paths_3,
-                    path_model_id = 'inception_v2_like')
-        wandb.finish()
+        # # Model_2
+        # wandb.init(project='diabetic-retinopathy-detection', name=run_paths_2['model_id'],
+        #            config=utils_params.gin_config_to_readable_dictionary(gin.config._CONFIG))
+        # train_model(model = model_2,
+        #             base_model = base_model_2,
+        #             ds_train = ds_train,
+        #             ds_val = ds_val,
+        #             num_batches = num_batches,
+        #             ds_info = ds_info,
+        #             run_paths = run_paths_2,
+        #             path_model_id = 'vgg_like')
+        # wandb.finish()
+        #
+        #
+        # # Model_3
+        # wandb.init(project='diabetic-retinopathy-detection', name=run_paths_3['model_id'],
+        #            config=utils_params.gin_config_to_readable_dictionary(gin.config._CONFIG))
+        # train_model(model = model_3,
+        #             base_model = base_model_3,
+        #             ds_train = ds_train,
+        #             ds_val = ds_val,
+        #             num_batches = num_batches,
+        #             ds_info = ds_info,
+        #             run_paths = run_paths_3,
+        #             path_model_id = 'inception_v2_like')
+        # wandb.finish()
 
     else:
         checkpoint_path_1 = '/home/RUS_CIP/st186731/dl-lab-24w-team04/experiments/run_2024-12-07T14-51-45-371592_mobilenet_like/ckpts'

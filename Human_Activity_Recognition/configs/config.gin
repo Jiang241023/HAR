@@ -2,13 +2,14 @@
 lstm_like.lstm_units = 64
 lstm_like.n_blocks = 2
 lstm_like.dense_units = 128
-
+lstm_like.dropout_rate = 0.5
 
 # Layers
 layers.lstm_block.lstm_units = 64
 layers.lstm_block.dropout_rate = 0.5
 
 # Training
+Trainer.batch_size = 64
 Trainer.total_epochs = 10
 Trainer.learning_rate = 1e-4
 
@@ -19,8 +20,7 @@ load.labels_file = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData\labels.txt'
 load.batch_size = 64
 prepare.caching = True
 
-train_model.unfrz_layer = 9
 
 # Grad_cam
-grad_cam_visualization.img_path =  '/home/RUS_CIP/st186731/augmented_images/train/class_1/IDRiD_001_aug_0.jpg'
-grad_cam_visualization.output_path = '/home/RUS_CIP/st186731/dl-lab-24w-team04/output_grad_cam/grad_cam.png'
+#grad_cam_visualization.img_path =  '/home/RUS_CIP/st186731/augmented_images/train/class_1/IDRiD_001_aug_0.jpg'
+#grad_cam_visualization.output_path = '/home/RUS_CIP/st186731/dl-lab-24w-team04/output_grad_cam/grad_cam.png'
