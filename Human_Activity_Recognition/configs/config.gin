@@ -16,7 +16,7 @@ Trainer.learning_rate = 1e-4
 load.name = 'HAPT'
 load.data_dir = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData'
 load.labels_file = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData\labels.txt'
-load.batch_size = 16
+load.batch_size = 64
 prepare.caching = True
 
 train_model.unfrz_layer = 9

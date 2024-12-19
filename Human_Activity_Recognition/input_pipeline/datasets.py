@@ -102,7 +102,7 @@ def sliding_window(data, labels, window_size=128, overlap = 0.5):
     return dataset
 
 @gin.configurable
-def load(name, data_dir, labels_file):
+def load(batch_size, name, data_dir, labels_file):
     if name == "HAPT":
         logging.info(f"Preparing dataset {name}...")
 
@@ -159,16 +159,24 @@ def load(name, data_dir, labels_file):
     # Calculate cumulative lengths for splitting
     train_length = ds_train.shape[0]
     val_length = ds_val.shape[0]
-
+    test_length = ds_test.shape[0]
+    print(f"train_length:{train_length}")
+    print(f"val_length:{val_length}")
+    print(f"test_length:{test_length}")
     # Split label_tensor
     train_labels = label_tensor[:train_length]
-    val_labels = label_tensor[train_length:train_length + val_length]
-    test_labels = label_tensor[train_length + val_length:]
-
+    test_labels = label_tensor[train_length:train_length+test_length]
+    val_labels = label_tensor[train_length + test_length:]
+    print(f"train_labels:{train_labels}")
+    print(f"test_labels:{test_labels}")
+    print(f"val_labels:{val_labels}")
     # Prepare
     ds_train, ds_val, ds_test = prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels)
+    ds_train = ds_train.batch(batch_size=batch_size)
+    ds_val = ds_val.batch(batch_size=batch_size)
+    ds_test = ds_test.batch(batch_size=batch_size)
 
-    return ds_train, ds_val, ds_test
+    return ds_train, ds_val, ds_test, batch_size
 
 
 @gin.configurable
@@ -190,7 +198,7 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, ds
     else:
         ds_train = ds_train.shuffle(1000)  # Fallback shuffle size
 
-    ds_train = ds_train.repeat().prefetch(tf.data.AUTOTUNE)
+    ds_train = ds_train.batch(batch_size).repeat().prefetch(tf.data.AUTOTUNE)
 
     # Prepare validation dataset (no augmentation)
     ds_val = ds_val.map(preprocess, num_parallel_calls=tf.data.AUTOTUNE)
@@ -212,8 +220,9 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, ds
 data_dir = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData'
 labels_file = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData\labels.txt'
 name = "HAPT"
+batch_size = 64
 
-ds_train, ds_val, ds_test = load(name, data_dir, labels_file)
+ds_train, ds_val, ds_test, batch_size = load(batch_size, name, data_dir, labels_file)
 
 datasets = [
     ("train", ds_train),
