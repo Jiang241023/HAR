@@ -15,10 +15,9 @@ def lstm_like(n_classes, lstm_units, dense_units, n_blocks, dropout_rate, input_
         out = lstm_block(out)
     out = tf.keras.layers.LSTM(lstm_units, return_sequences=False, kernel_regularizer=l2(1e-4))(out)
     out = tf.keras.layers.Dropout(dropout_rate)(out)
-    out = tf.keras.layers.GlobalAveragePooling2D()(out)
     out = tf.keras.layers.Dense(dense_units, kernel_regularizer=l2(1e-4))(out)
     out = tf.keras.layers.LeakyReLU(alpha=0.01)(out)
     out = tf.keras.layers.Dropout(dropout_rate)(out)
-    outputs = tf.keras.layers.Dense(n_classes - 1, activation = 'softmax', kernel_regularizer=l2(1e-4))(out)
+    outputs = tf.keras.layers.Dense(n_classes, activation = 'softmax', kernel_regularizer=l2(1e-4))(out)
 
     return tf.keras.Model(inputs = out, outputs=outputs, name='lstm_like')
