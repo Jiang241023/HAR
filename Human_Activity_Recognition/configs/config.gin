@@ -9,8 +9,8 @@ layers.lstm_block.lstm_units = 64
 layers.lstm_block.dropout_rate = 0.5
 
 # Training
-Trainer.batch_size = 64
-Trainer.total_epochs = 10
+Trainer.batch_size = 128
+Trainer.total_epochs = 100
 Trainer.learning_rate = 1e-4
 
 # Input pipeline

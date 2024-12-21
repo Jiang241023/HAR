@@ -9,15 +9,18 @@ def lstm_like(n_classes, lstm_units, dense_units, n_blocks, dropout_rate, input_
 
     #Load the pretrained VGG16 model excluding the top classification layer
     assert n_blocks > 0
-    out = tf.keras.Input(shape = input_shape)
-    print(out.shape)
-    for i in range(n_blocks - 1):
-        out = lstm_block(out)
-    out = tf.keras.layers.LSTM(lstm_units, return_sequences=False, kernel_regularizer=l2(1e-4))(out)
-    out = tf.keras.layers.Dropout(dropout_rate)(out)
-    out = tf.keras.layers.Dense(dense_units, kernel_regularizer=l2(1e-4))(out)
-    out = tf.keras.layers.LeakyReLU(alpha=0.01)(out)
-    out = tf.keras.layers.Dropout(dropout_rate)(out)
-    outputs = tf.keras.layers.Dense(n_classes, activation = 'softmax', kernel_regularizer=l2(1e-4))(out)
+    inputs = tf.keras.Input(shape = input_shape)
+    x = inputs
+    print(f"input shape:{x.shape}")
+    for _ in range(n_blocks - 1):
+        x = lstm_block(x)
+    lstm_out = tf.keras.layers.LSTM(lstm_units, return_sequences=True, kernel_regularizer=l2(1e-4))(x)
+    print(f"lstm_out when return_sequences=True shape:{lstm_out.shape}")
+    lstm_out = tf.keras.layers.Flatten()(lstm_out)
+    x = tf.keras.layers.Dropout(dropout_rate)(lstm_out)
+    x = tf.keras.layers.Dense(dense_units, kernel_regularizer=l2(1e-4))(x)
+    x = tf.keras.layers.LeakyReLU(alpha=0.01)(x)
+    x = tf.keras.layers.Dropout(dropout_rate)(x)
+    outputs = tf.keras.layers.Dense(n_classes, activation = 'softmax', kernel_regularizer=l2(1e-4))(x)
 
-    return tf.keras.Model(inputs = out, outputs=outputs, name='lstm_like')
+    return tf.keras.Model(inputs = inputs, outputs=outputs, name='lstm_like')

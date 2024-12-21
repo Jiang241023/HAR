@@ -12,21 +12,22 @@ class Trainer(object):
 
         # Checkpoint Manager
         # ...
-        self.checkpoint = tf.train.Checkpoint(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+        self.checkpoint = tf.train.Checkpoint(optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate),
                                               model=model)
         self.checkpoint_manager = tf.train.CheckpointManager(self.checkpoint,
                                                              directory=run_paths["path_ckpts_train"],
                                                              max_to_keep = 1)
         # Loss objective
         self.loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False) # from_logits=False: output has already been processed through the sigmoid activation function.
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-
+        #self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        self.optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9) #=> 400 epochs: test accuracy
+        self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
         # Metrics
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
-        self.train_accuracy = tf.keras.metrics.SparseCategoricalCrossentropy(name='train_accuracy')
+        self.train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
 
-        self.test_loss = tf.keras.metrics.Mean(name='val_loss')
-        self.test_accuracy = tf.keras.metrics.SparseCategoricalCrossentropy(name='val_accuracy')
+        self.val_loss = tf.keras.metrics.Mean(name='val_loss')
+        self.val_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='val_accuracy')
 
         self.model = model
         self.ds_train = ds_train
@@ -37,13 +38,11 @@ class Trainer(object):
         self.log_interval = batch_size
         #self.ckpt_interval = ckpt_interval
 
-
-        print(f"Number of batches in validation dataset: {len(list(self.ds_val))}")
-        for image, label in ds_val.take(1):
-            print(f"Validation batch shape: {image.shape}, Label shape: {label.shape}")
-
     @tf.function
     def train_step(self, data, labels):
+
+        tf.debugging.assert_shapes([(data, (None, 128, 6))])
+
         with tf.GradientTape() as tape:
             # training=True is only needed if there are layers with different
             # behavior during training versus inference (e.g. Dropout).
