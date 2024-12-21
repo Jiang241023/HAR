@@ -129,7 +129,7 @@ def main(argv):
 
 
     else:
-        checkpoint_path_1 = r'E:\DL_LAB_HAPT\dl-lab-24w-team04-har\experiments\run_2024-12-21T12-00-04-347681_lstm_like\ckpts\ckpt-1'
+        checkpoint_path_1 = r'E:\DL_LAB_HAPT\dl-lab-24w-team04-har\experiments\run_2024-12-21T15-57-07-823708_lstm_like\ckpts'
         checkpoint_1 = tf.train.Checkpoint(model=model_1)
         latest_checkpoint_1 = tf.train.latest_checkpoint(checkpoint_path_1)
         if latest_checkpoint_1:

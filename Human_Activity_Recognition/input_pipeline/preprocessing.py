@@ -17,7 +17,7 @@ def augment(data, label):
     scaled_data = scaled_data * scale_factor
     return scaled_data, label
 
-def oversample_and_augment(data,label, minority_classes, oversample_factor = 2):
+def oversample_and_augment(data,label, minority_classes=None, oversample_factor = 2):
     # seperate data into minority and majority class
     minority_indices = tf.where(tf.reduce_any([labels == c for c in minority_classes], axis = 0))
     majority_indices = tf.where(~tf.reduce_any([labels == c for c in minority_classes], axis = 0))

@@ -12,7 +12,7 @@ class Trainer(object):
 
         # Checkpoint Manager
         # ...
-        self.checkpoint = tf.train.Checkpoint(optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate),
+        self.checkpoint = tf.train.Checkpoint(optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9),
                                               model=model)
         self.checkpoint_manager = tf.train.CheckpointManager(self.checkpoint,
                                                              directory=run_paths["path_ckpts_train"],
@@ -21,7 +21,7 @@ class Trainer(object):
         self.loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False) # from_logits=False: output has already been processed through the sigmoid activation function.
         #self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         self.optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9) #=> 400 epochs: test accuracy
-        self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
+        #self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
         # Metrics
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
@@ -41,28 +41,30 @@ class Trainer(object):
     @tf.function
     def train_step(self, data, labels):
 
-        tf.debugging.assert_shapes([(data, (None, 128, 6))])
+        sample_weights = tf.cast( labels > 0, dtype = tf.float32)
 
         with tf.GradientTape() as tape:
             # training=True is only needed if there are layers with different
             # behavior during training versus inference (e.g. Dropout).
             predictions = self.model(data, training=True)
-            loss = self.loss_object(labels, predictions)
+            loss = self.loss_object(labels, predictions, sample_weight=sample_weights)
         gradients = tape.gradient(loss, self.model.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
 
         self.train_loss(loss)
-        self.train_accuracy(labels, predictions)
+        self.train_accuracy(labels, predictions, sample_weight = sample_weights)
 
     @tf.function
     def validation_step(self, data, labels):
         # training=False is only needed if there are layers with different
         # behavior during training versus inference (e.g. Dropout).
+        sample_weights = tf.cast(labels > 0, dtype=tf.float32)
+
         predictions = self.model(data, training=False)
-        val_loss = self.loss_object(labels, predictions)
+        val_loss = self.loss_object(labels, predictions, sample_weight=sample_weights)
 
         self.val_loss(val_loss)
-        self.val_accuracy(labels, predictions)
+        self.val_accuracy(labels, predictions, sample_weight=sample_weights)
 
 
     def train(self):
