@@ -10,20 +10,19 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble):
     accuracy_list = []
     tp, fp, fn, tn = 0, 0, 0, 0
 
-    for idx, (images, labels) in enumerate(ds_test):
+    for idx, (dataset, labels) in enumerate(ds_test):
         threshold = 0.5
-
         if ensemble == True:
             # Model_1
-            predictions_1 = model_1(images, training = False)
+            predictions_1 = model_1(dataset, training = False)
             predictions_1 = tf.cast(predictions_1 > threshold, tf.int32)
 
             # Model_2
-            predictions_2 = model_2(images, training=False)
+            predictions_2 = model_2(dataset, training=False)
             predictions_2 = tf.cast(predictions_2 > threshold, tf.int32)
 
             # Model_3
-            predictions_3 = model_3(images, training=False)
+            predictions_3 = model_3(dataset, training=False)
             predictions_3 = tf.cast(predictions_3 > threshold, tf.int32)
 
             # final_predictions
@@ -32,17 +31,26 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble):
             final_predictions = tf.cast(votes > 1, tf.int32)
         else:
             # Model_2
-            predictions_2 = model_2(images, training=False)
-            predictions_2 = tf.cast(predictions_2 > threshold, tf.int32)
-            final_predictions = predictions_2
+            final_predictions = model_1(dataset, training=False)
+            #print(f"final_predictions:{final_predictions}")
 
         # Update accuracy
-        matches = tf.cast(final_predictions == labels, tf.float32)
-        batch_accuracy = tf.reduce_mean(matches)
-        accuracy_list.append(batch_accuracy.numpy())
+        predicted_labels = tf.argmax(final_predictions, axis=-1)
+        true_labels = tf.cast(labels, tf.int64)
+        non_zero_mask = tf.not_equal(true_labels, 0)
+        filtered_predicted_labels = tf.boolean_mask(predicted_labels, non_zero_mask)
+        filtered_true_labels = tf.boolean_mask(true_labels, non_zero_mask)
+        print(f"filtered_predicted_labels:{filtered_predicted_labels}")
+        print(f"filtered_true_labels:{filtered_true_labels}")
+        matches = tf.cast(filtered_predicted_labels == filtered_true_labels, tf.float32)
+        if tf.size(matches) > 0:
+            batch_accuracy = tf.reduce_mean(matches)
+            accuracy_list.append(batch_accuracy.numpy())
+        else:
+            print("No non-zero labels in this batch. Skipping accuracy calculation.")
 
         # Update confusion matrix metrics
-        metrics.update_state(labels, final_predictions)
+        metrics.update_state(tf.argmax(labels, axis=-1), final_predictions)
 
     # Calculate metrics
     accuracy = sum(accuracy_list) / len(accuracy_list)

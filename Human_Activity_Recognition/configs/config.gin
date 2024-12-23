@@ -4,13 +4,30 @@ lstm_like.n_blocks = 2
 lstm_like.dense_units = 128
 lstm_like.dropout_rate = 0.5
 
+gru_like.gru_units = 64
+gru_like.n_blocks = 2
+gru_like.dense_units = 128
+gru_like.dropout_rate = 0.5
+
+transformer_like.n_blocks = 8
+transformer_like.dense_units = 128
+transformer_like.dropout_rate = 0.5
+
 # Layers
 layers.lstm_block.lstm_units = 64
 layers.lstm_block.dropout_rate = 0.5
 
+layers.gru_block.gru_units = 64
+layers.gru_block.dropout_rate = 0.5
+
+layers.transformer_block.num_heads = 4
+#layers.transformer_block.ff_dim = 128 * layers.transformer_block.num_heads
+layers.transformer_block.ff_dim = 512
+layers.transformer_block.dropout_rate = 0.5
+
 # Training
-Trainer.batch_size = 64
-Trainer.total_epochs = 10
+Trainer.batch_size = 128
+Trainer.total_epochs = 200
 Trainer.learning_rate = 1e-4
 
 # Input pipeline
