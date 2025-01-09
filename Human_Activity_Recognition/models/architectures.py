@@ -36,7 +36,7 @@ def gru_like(n_classes, gru_units, dense_units, n_blocks, dropout_rate, input_sh
     for _ in range(n_blocks - 1):
         x = gru_block(x)
     gru_out = tf.keras.layers.GRU(gru_units, return_sequences=True, kernel_regularizer=l2(1e-4))(x)
-    print(f"gru_out when return_sequences=True shape:{gru_out.shape}")
+
     x = tf.keras.layers.Flatten()(gru_out)
     x = tf.keras.layers.Dropout(dropout_rate)(x)
     x = tf.keras.layers.Dense(dense_units, kernel_regularizer=l2(1e-4))(x)

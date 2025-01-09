@@ -2,13 +2,13 @@ import tensorflow as tf
 from evaluation.metrics import ConfusionMatrix
 import logging
 import wandb
+import gin
 
-
-def evaluate(model_1, model_2, model_3, ds_test, ensemble):
+@gin.configurable
+def evaluate(model_1, model_2, model_3, ds_test, ensemble, num_classes):
 
     metrics = ConfusionMatrix()
     accuracy_list = []
-    tp, fp, fn, tn = 0, 0, 0, 0
 
     for idx, (dataset, labels) in enumerate(ds_test):
         threshold = 0.5
@@ -30,71 +30,48 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble):
 
             final_predictions = tf.cast(votes > 1, tf.int32)
         else:
-            # Model_2
+            # Model_1
             final_predictions = model_1(dataset, training=False)
             #print(f"final_predictions:{final_predictions}")
 
-        # Update accuracy
+        # Convert predictions to class labels
+        # print(f"final_predictions(before argmax):{final_predictions}")
         predicted_labels = tf.argmax(final_predictions, axis=-1)
         true_labels = tf.cast(labels, tf.int64)
+
+        # filter out zero labels
         non_zero_mask = tf.not_equal(true_labels, 0)
-        filtered_predicted_labels = tf.boolean_mask(predicted_labels, non_zero_mask)
-        filtered_true_labels = tf.boolean_mask(true_labels, non_zero_mask)
-        print(f"filtered_predicted_labels:{filtered_predicted_labels}")
-        print(f"filtered_true_labels:{filtered_true_labels}")
+        filtered_predicted_labels = tf.boolean_mask(predicted_labels, non_zero_mask) - 1
+        filtered_true_labels = tf.boolean_mask(true_labels, non_zero_mask) - 1
+        # print(f"filtered_predicted_labels:{filtered_predicted_labels.numpy()}")
+        # print(f"filtered_true_labels:{filtered_true_labels.numpy()}")
+
         matches = tf.cast(filtered_predicted_labels == filtered_true_labels, tf.float32)
         if tf.size(matches) > 0:
-            batch_accuracy = tf.reduce_mean(matches)
+            batch_accuracy = tf.reduce_mean(matches) # tf.reduce_mean([1 2 3 4 5]) => (1+2+3+4+5)/5 = 3
             accuracy_list.append(batch_accuracy.numpy())
         else:
             print("No non-zero labels in this batch. Skipping accuracy calculation.")
 
         # Update confusion matrix metrics
-        metrics.update_state(tf.argmax(labels, axis=-1), final_predictions)
+        metrics.update_state(filtered_true_labels, filtered_predicted_labels)
 
-    # Calculate metrics
+    # Calculate accuracy
     accuracy = sum(accuracy_list) / len(accuracy_list)
 
     # Log the test accuracy to WandB
     wandb.log({'Evaluation_accuracy': accuracy})
 
-    results = metrics.result()
+    # Plot confusion matrix
+    metrics.plot_confusion_matrix(normalize=True)
 
-    tp = results["tp"]
-    fp = results["fp"]
-    tn = results["tn"]
-    fn = results["fn"]
-
-    sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    f1_score = 2 * (precision * sensitivity) / (precision + sensitivity) if (precision + sensitivity) > 0 else 0.0
-
-    # Logging and printing results
-    logging.info(f"Evaluation_accuracy: {accuracy:.2%}")
-    logging.info(f"Confusion Matrix: TP={tp}, FP={fp}, TN={tn}, FN={fn}")
-    logging.info(f"Sensitivity (Recall): {sensitivity:.2%}")
-    logging.info(f"Specificity: {specificity:.2%}")
-    logging.info(f"Precision: {precision:.2%}")
-    logging.info(f"F1-Score: {f1_score:.2%}")
-
-    print(f"Evaluation_accuracy is: {accuracy:.2%}")
-    print(f"Sensitivity (Recall): {sensitivity:.2%}")
-    print(f"Specificity: {specificity:.2%}")
-    print(f"Precision: {precision:.2%}")
-    print(f"F1-Score: {f1_score:.2%}")
-    print(f"Confusion Matrix: TP={tp}, FP={fp}, TN={tn}, FN={fn}")
+    # Results
+    matrix = metrics.result().numpy()
+    print(f"Evaluation_accuracy: {accuracy}")
+    print("Confusion Matrix:")
+    print(matrix)
 
     return {
         "Evaluation_accuracy": accuracy,
-        "sensitivity": sensitivity,
-        "specificity": specificity,
-        "precision": precision,
-        "f1_score": f1_score,
-        "confusion_matrix": {
-            "tp": tp,
-            "fp": fp,
-            "tn": tn,
-            "fn": fn
-        }
+        "confusion_matrix": matrix
     }
