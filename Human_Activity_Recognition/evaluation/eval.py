@@ -57,7 +57,7 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble, num_classes):
         metrics.update_state(filtered_true_labels, filtered_predicted_labels)
 
     # Calculate accuracy
-    accuracy = sum(accuracy_list) / len(accuracy_list)
+    accuracy = 100 * sum(accuracy_list) / len(accuracy_list)
 
     # Log the test accuracy to WandB
     wandb.log({'Evaluation_accuracy': accuracy})

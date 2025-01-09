@@ -1,8 +1,8 @@
-import gin
+#import gin
 import tensorflow as tf
 from tensorflow.keras.regularizers import l2
 
-@gin.configurable
+
 def lstm_block(inputs, lstm_units, dropout_rate):
 
     # LSTM Layer
@@ -11,7 +11,7 @@ def lstm_block(inputs, lstm_units, dropout_rate):
 
     return out
 
-@gin.configurable
+#@gin.configurable
 def gru_block(inputs, gru_units, dropout_rate):
 
     # LSTM Layer
@@ -20,7 +20,7 @@ def gru_block(inputs, gru_units, dropout_rate):
 
     return out
 
-@gin.configurable
+#@gin.configurable
 def transformer_block(inputs, num_heads, ff_dim, dropout_rate):
 
     # Multi-Head Attention

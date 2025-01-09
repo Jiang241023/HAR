@@ -39,7 +39,7 @@ class Trainer(object):
         #self.ckpt_interval = ckpt_interval
 
         # Define class weight
-        self.class_weights = { 0: 0, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 4, 8: 4, 9: 4, 10: 4, 11: 4, 12: 4}
+        self.class_weights = { 0: 0, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 5, 8: 5, 9: 2, 10: 2, 11: 2, 12: 2}
 
         self.class_weight_tensor = tf.constant([self.class_weights[i] for i in range(len(self.class_weights))],
                                            dtype=tf.float32)
@@ -49,6 +49,7 @@ class Trainer(object):
 
         class_weights = tf.gather(self.class_weight_tensor, labels)
         sample_weights = tf.cast(labels > 0, dtype=tf.float32) * class_weights
+        # sample_weights = tf.cast(labels > 0, dtype=tf.float32)
 
         with tf.GradientTape() as tape:
             # training=True is only needed if there are layers with different
@@ -67,6 +68,7 @@ class Trainer(object):
         # behavior during training versus inference (e.g. Dropout).
         class_weights = tf.gather(self.class_weight_tensor, labels)
         sample_weights = tf.cast(labels > 0, dtype=tf.float32) * class_weights
+        # sample_weights = tf.cast(labels > 0, dtype=tf.float32)
 
         predictions = self.model(data, training=False)
         val_loss = self.loss_object(labels, predictions, sample_weight=sample_weights)

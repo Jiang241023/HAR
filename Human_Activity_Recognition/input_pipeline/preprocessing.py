@@ -18,40 +18,53 @@ def augment(data, label):
     # scaled_data = scaled_data * scale_factor
     return scaled_data, label
 
-def oversample_and_augment(data,label, minority_classes=None, oversample_factor = 2):
-    # seperate data into minority and majority class
-    minority_indices = tf.where(tf.reduce_any([label == c for c in minority_classes], axis = 0))
-    majority_indices = tf.where(~tf.reduce_any([label == c for c in minority_classes], axis = 0))
+def oversample(data, labels, debug=True):
+    # ensure labels are 1D
+    labels = tf.squeeze(labels)
+    # get unique activities and their counts
+    activities, _,activity_counts = tf.unique_with_counts(labels) # unique values, indices of unique values, counts
+    primary_mask = activities < 7
 
-    minority_data = tf.gather(data, minority_indices)
-    minority_labels = tf.gather(label, minority_indices)
+    max_activity = tf.reduce_max(tf.boolean_mask(activity_counts,primary_mask))
+    max_transition_activity = tf.reduce_max(tf.boolean_mask(activity_counts,~primary_mask))
 
-    majority_data = tf.gather(data, majority_indices)
-    majority_labels = tf.gather(data,majority_indices)
+    activities_in_order = tf.unique(labels)[0]
 
-    # Repeat and augment the minority class samples
-    oversampled_data = tf.repeat(minority_data, repeats= oversample_factor, axis = 0)
-    oversampled_labels = tf.repeat(minority_labels, repeats = oversample_factor , axis = 0)
+    # Initialize list for oversampled data and labels
+    oversampled_data = []
+    oversampled_labels = []
 
-    def augment_ov(data, label):
-        jitter = tf.random.uniform(data.shape, minval=-0.1, maxval=0.1)
-        scaled_data = data + jitter
-        scale_factor = tf.random.uniform([], minval=0.9,maxval=1.1)
-        scaled_data = scaled_data * scale_factor
-        return scaled_data, label
+    # Oversample each activity
+    for activity in activities_in_order:
+        activity_indices = tf.where(labels == activity)[:,0]
 
-    oversampled_data , oversampled_labels = tf.map_fn(lambda x: augment(x[0], x[1]),(oversampled_data, oversampled_labels),
-                                                      fn_output_signature =(tf.TensorSpec(shape=data.shape[1:], dtype=data.dtype),
-                                                                            tf.TensorSpec(shape=label.shape[1:], dtype=label.dtype)))
-    combined_data = tf.concat([majority_data, oversampled_data], axis =0)
-    combined_labels = tf.concat([majority_labels, oversampled_labels], axis=0)
+        # Determine oversampling size
+        if activity < 7 :
+            oversample_size = max_activity
+        else:
+            oversample_size = max_transition_activity
 
-    # Sort the combined dataset by temporal order
-    sorted_indices = tf.argsort(tf.range(tf.shape(combined_data)[0]))
-    combined_data = tf.gather(combined_data, sorted_indices)
-    combined_labels = tf.gather(combined_labels)
+        # Debug info
+        if debug:
+            print(f"Activity: {activity}")
+            print(f"Original count: {len(activity_indices)}")
+            print(f"Oversample size: {oversample_size}")
 
-    return combined_data, combined_labels
+        # Perform random sampling with replacement
+        sampled_indices = tf.random.uniform([oversample_size],minval=0, maxval=tf.shape(activity_indices)[0], dtype=tf.int32)
+        sampled_indices = tf.gather(activity_indices, sampled_indices)
+
+        # Gather oversampled data and labels
+        oversampled_data.append(tf.gather(data, sampled_indices))
+        oversampled_labels.append(tf.gather(labels, sampled_indices))
+
+    # Concatenate oversampled data and labels
+    oversampled_data = tf.concat(oversampled_data, axis=0)
+    oversampled_labels = tf.concat(oversampled_labels, axis=0)
+
+    dataset = tf.data.Dataset.from_tensor_slices((oversampled_data,oversampled_labels))
+
+    return dataset
 
 
 

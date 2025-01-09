@@ -20,9 +20,8 @@ def random_seed(seed):
 random_seed(47)
 
 FLAGS = flags.FLAGS
-flags.DEFINE_boolean('train', False,'Specify whether to train or evaluate a model.')
+flags.DEFINE_boolean('train', True,'Specify whether to train or evaluate a model.')
 
-@gin.configurable
 def train_model(model, ds_train, ds_val, batch_size, run_paths, path_model_id):
     print('-' * 88)
     print(f'Starting training {path_model_id}')
@@ -32,10 +31,6 @@ def train_model(model, ds_train, ds_val, batch_size, run_paths, path_model_id):
         print(layer.name, layer.trainable)
     for _ in trainer.train():
         continue
-    # for layer in base_model.layers[-unfrz_layer:]:
-    #     layer.trainable = True
-    # for _ in trainer.train():
-    #     continue
     print(f"Training checkpoint path for {path_model_id}: {run_paths['path_ckpts_train']}")
     print(f'Training completed for {path_model_id}')
     print('-' * 88)
@@ -105,7 +100,7 @@ def main(argv):
         wandb.finish()
 
     else:
-        checkpoint_path_1 = r'E:\DL_LAB_HAPT\HAR\experiments\run_2025-01-08T18-37-38-663650_lstm_like\ckpts'
+        checkpoint_path_1 = r'E:\DL_LAB_HAPT\HAR\experiments\run_2025-01-09T17-48-35-856517_lstm_like\ckpts'
         checkpoint_1 = tf.train.Checkpoint(model=model_1)
         latest_checkpoint_1 = tf.train.latest_checkpoint(checkpoint_path_1)
         if latest_checkpoint_1:
