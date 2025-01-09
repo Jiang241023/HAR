@@ -6,9 +6,9 @@ import seaborn as sns
 
 @gin.configurable
 class ConfusionMatrix(tf.keras.metrics.Metric):
-    def __init__(self, num_classes, name, labels_name, save_path = r'E:\DL_LAB_HAPT\metrics', **kwargs):
+    def __init__(self, num_classes, name, labels_name, save_path, **kwargs):
         super(ConfusionMatrix, self).__init__(name=name, **kwargs)
-        self.num_classes = num_classes
+        self.num_classes = num_classes-1
         self.labels_name = labels_name
         self.save_path = save_path
         self.matrix = tf.Variable(initial_value=tf.zeros((self.num_classes, self.num_classes), dtype=tf.float32), dtype=tf.float32)
@@ -16,19 +16,15 @@ class ConfusionMatrix(tf.keras.metrics.Metric):
     def update_state(self, y_true, y_pred, sample_weight=None):
 
         y_true = tf.cast(y_true, tf.int32)
-        y_pred = tf.argmax(y_pred, axis=-1, output_type=tf.int32)
+        y_pred = tf.cast(y_pred, tf.int32)
 
         new_matrix = tf.math.confusion_matrix(y_true, y_pred, num_classes = self.num_classes, dtype = tf.float32)
         self.matrix.assign_add(new_matrix)
 
-
     def result(self):
         return self.matrix
 
-    def reset_state(self):
-        self.matrix.assign(tf.Variable(initial_value=tf.zeros(self.num_classes, self.num_classes), dtype = tf.float32))
-
-    def plot_confusion_matrix(self, normalize=True, cmap="Reds"):
+    def plot_confusion_matrix(self, normalize, cmap="Reds"):
         matrix = self.matrix.numpy()
 
         if normalize:
@@ -41,18 +37,8 @@ class ConfusionMatrix(tf.keras.metrics.Metric):
         plt.ylabel("True Label")
         plt.xlabel("Predicted Label")
         plt.tight_layout()
-
+        print("DEBUG: self.save_path =", self.save_path)
         if self.save_path:
             plt.savefig(self.save_path)
             print(f"Confusion matrix saved to {self.save_path}")
-
-
-
-
-
-
-
-
-
-
 

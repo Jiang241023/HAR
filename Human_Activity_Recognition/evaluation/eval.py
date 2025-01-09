@@ -2,9 +2,10 @@ import tensorflow as tf
 from evaluation.metrics import ConfusionMatrix
 import logging
 import wandb
+import gin
 
-
-def evaluate(model_1, model_2, model_3, ds_test, ensemble):
+@gin.configurable
+def evaluate(model_1, model_2, model_3, ds_test, ensemble, num_classes):
 
     metrics = ConfusionMatrix()
     accuracy_list = []
@@ -33,14 +34,18 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble):
             final_predictions = model_1(dataset, training=False)
             #print(f"final_predictions:{final_predictions}")
 
-        # Update accuracy
+        # Convert predictions to class labels
+        # print(f"final_predictions(before argmax):{final_predictions}")
         predicted_labels = tf.argmax(final_predictions, axis=-1)
         true_labels = tf.cast(labels, tf.int64)
+
+        # filter out zero labels
         non_zero_mask = tf.not_equal(true_labels, 0)
-        filtered_predicted_labels = tf.boolean_mask(predicted_labels, non_zero_mask)
-        filtered_true_labels = tf.boolean_mask(true_labels, non_zero_mask)
-        print(f"filtered_predicted_labels:{filtered_predicted_labels}")
-        print(f"filtered_true_labels:{filtered_true_labels}")
+        filtered_predicted_labels = tf.boolean_mask(predicted_labels, non_zero_mask) - 1
+        filtered_true_labels = tf.boolean_mask(true_labels, non_zero_mask) - 1
+
+        # print(f"filtered_predicted_labels:{filtered_predicted_labels.numpy()}")
+        # print(f"filtered_true_labels:{filtered_true_labels.numpy()}")
         matches = tf.cast(filtered_predicted_labels == filtered_true_labels, tf.float32)
         if tf.size(matches) > 0:
             batch_accuracy = tf.reduce_mean(matches)
@@ -49,9 +54,9 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble):
             print("No non-zero labels in this batch. Skipping accuracy calculation.")
 
         # Update confusion matrix metrics
-        metrics.update_state(labels, final_predictions)
+        metrics.update_state(filtered_true_labels, filtered_predicted_labels)
 
-    # Calculate metrics
+    # Calculate accuracy
     accuracy = sum(accuracy_list) / len(accuracy_list)
 
     # Log the test accuracy to WandB
@@ -62,6 +67,7 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble):
 
     # Results
     matrix = metrics.result().numpy()
+    print(f"Evaluation_accuracy: {accuracy}")
     print("Confusion Matrix:")
     print(matrix)
 
