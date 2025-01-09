@@ -4,7 +4,7 @@ from models.layers import lstm_block, gru_block, transformer_block
 from tensorflow.keras.regularizers import l2
 
 @gin.configurable
-def lstm_like(n_classes, lstm_units, dense_units, n_blocks, dropout_rate, input_shape = (128, 6)):
+def lstm_like(n_classes, lstm_units, dense_units, n_blocks, dropout_rate_lstm_block, dropout_rate_dense_layer, input_shape = (128, 6)):
 
     #Load the pretrained VGG16 model excluding the top classification layer
     assert n_blocks > 0
@@ -12,7 +12,7 @@ def lstm_like(n_classes, lstm_units, dense_units, n_blocks, dropout_rate, input_
     x = inputs
     print(f"input shape:{x.shape}")
     for _ in range(n_blocks - 1):
-        x = lstm_block(x, lstm_units, dropout_rate)
+        x = lstm_block(x, lstm_units, dropout_rate_lstm_block)
         x = tf.keras.layers.MaxPool1D(pool_size = 2, padding = 'same')(x)
         print(f"output(after max pooling):{x}")
         x = tf.keras.layers.BatchNormalization()(x) # BatchNormalization helps keep the model’s activation distribution relatively stable, speeds up training, facilitates convergence, and also mitigates overfitting to some extent.
@@ -22,10 +22,10 @@ def lstm_like(n_classes, lstm_units, dense_units, n_blocks, dropout_rate, input_
     x = tf.keras.layers.MaxPool1D(pool_size=2, padding='same')(x)
     x = tf.keras.layers.BatchNormalization()(x)
     lstm_out = tf.keras.layers.Flatten()(x)
-    x = tf.keras.layers.Dropout(dropout_rate)(lstm_out)
+    x = tf.keras.layers.Dropout(dropout_rate_lstm_block)(lstm_out)
     x = tf.keras.layers.Dense(dense_units, kernel_regularizer=l2(1e-4))(x)
     x = tf.keras.layers.LeakyReLU(alpha=0.01)(x)
-    x = tf.keras.layers.Dropout(dropout_rate)(x)
+    x = tf.keras.layers.Dropout(dropout_rate_dense_layer)(x)
     outputs = tf.keras.layers.Dense(n_classes, activation = 'softmax', kernel_regularizer=l2(1e-4))(x)
 
     return tf.keras.Model(inputs = inputs, outputs=outputs, name='lstm_like')

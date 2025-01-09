@@ -2,7 +2,8 @@
 lstm_like.lstm_units = 32
 lstm_like.n_blocks = 4
 lstm_like.dense_units = 128
-lstm_like.dropout_rate = 0.3
+lstm_like.dropout_rate_lstm_block = 0.3
+lstm_like.dropout_rate_dense_layer = 0.3
 
 #gru_like.gru_units = 64
 #gru_like.n_blocks = 2
@@ -38,13 +39,13 @@ load.batch_size = 64
 prepare.caching = True
 
 # Eval
-#eval.evaluate.num_classes = 13
+eval.evaluate.num_classes = 13
 
 # Metrics
-#metrics.ConfusionMatrix.num_classes = 13
-#metrics.ConfusionMatrix.name = "confusion_matrix"
-#metrics.ConfusionMatrix.labels_name = ['walking', 'walking_upstairs', 'walking_downstairs',
-#                                        'sitting', 'standing', 'laying', 'stand-sit',
-#                                       'sit-stand', 'sit-lie', 'lie-sit', 'stand-lie', 'lie-stand']
-#metrics.ConfusionMatrix.save_path = r'E:\DL_LAB_HAPT\confusion_matrix\cm.png'
+metrics.ConfusionMatrix.num_classes = 13
+metrics.ConfusionMatrix.name = "confusion_matrix"
+metrics.ConfusionMatrix.labels_name = ['walking', 'walking_upstairs', 'walking_downstairs',
+                                        'sitting', 'standing', 'laying', 'stand-sit',
+                                       'sit-stand', 'sit-lie', 'lie-sit', 'stand-lie', 'lie-stand']
+metrics.ConfusionMatrix.save_path = r'E:\DL_LAB_HAPT\confusion_matrix\cm.png'
 
