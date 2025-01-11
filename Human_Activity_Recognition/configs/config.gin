@@ -10,7 +10,7 @@ gru_like.n_blocks = 3
 gru_like.dense_units = 128
 gru_like.dropout_rate = 0.5
 
-#transformer_like.n_blocks = 8
+#transformer_like.n_blocks = 5
 #transformer_like.dense_units = 128
 #transformer_like.dropout_rate = 0.5
 
@@ -28,14 +28,14 @@ layers.gru_block.dropout_rate = 0.5
 
 # Training
 Trainer.batch_size = 128
-Trainer.total_epochs = 100
-Trainer.learning_rate = 1e-4
+Trainer.total_epochs = 65
+#Trainer.learning_rate = 1e-4
 
 # Input pipeline
 load.name = 'HAPT'
 load.data_dir = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData'
 load.labels_file = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData\labels.txt'
-load.batch_size = 64
+load.batch_size = 128
 #prepare.caching = True
 
 # Eval
