@@ -32,18 +32,10 @@ def evaluate(model, ds_test):
         # print(f"final_predictions:{final_predictions}")
 
         # Convert predictions to class labels
-        # print(f"final_predictions(before argmax):{final_predictions}")
         predicted_labels = tf.argmax(final_predictions, axis=-1)
         true_labels = tf.cast(labels, tf.int64)
 
-        # filter out zero labels
-        non_zero_mask = tf.not_equal(true_labels, 0)
-        filtered_predicted_labels = tf.boolean_mask(predicted_labels, non_zero_mask) - 1
-        filtered_true_labels = tf.boolean_mask(true_labels, non_zero_mask) - 1
-        # print(f"filtered_predicted_labels:{filtered_predicted_labels.numpy()}")
-        # print(f"filtered_true_labels:{filtered_true_labels.numpy()}")
-
-        matches = tf.cast(filtered_predicted_labels == filtered_true_labels, tf.float32)
+        matches = tf.cast(predicted_labels == true_labels, tf.float32)
         if tf.size(matches) > 0:
             batch_accuracy = tf.reduce_mean(matches)  # tf.reduce_mean([1 2 3 4 5]) => (1+2+3+4+5)/5 = 3
             accuracy_list.append(batch_accuracy.numpy())
@@ -56,7 +48,7 @@ def evaluate(model, ds_test):
     # Log the test accuracy to WandB
     wandb.log({'Evaluation_accuracy':accuracy})
 
-    return 100 * accuracy
+    return accuracy
 
 def train_func():
 
@@ -121,35 +113,37 @@ for model in model_types:
             'name': f"{model}-sweep",
             'method': 'bayes',
             'metric': {
-                'name': 'val_acc',
+                'name': 'eval_acc',
                 'goal': 'maximize'
             },
             'parameters': {
                 'Trainer.total_epochs': {
-                    'values': [150]
+                    'values': [100]
                 },
                 'model_type':{
                     'values': [model]
                 },
                 'lstm_like.lstm_units': {
-                    'distribution': 'q_log_uniform',
-                    'q': 1,
-                    'min': math.log(8), # -> ln8 = 2.0794
-                    'max': math.log(128) # -> ln128 = 4.852
+                    'distribution': 'uniform',
+                    'min': 8,
+                    'max': 128
                 },
                 'lstm_like.n_blocks': {
-                    'distribution': 'q_uniform',
-                    'q': 1,
+                    'distribution': 'uniform',
                     'min': 1,
                     'max': 5
                 },
                 'lstm_like.dense_units': {
-                    'distribution': 'q_log_uniform',
-                    'q': 1,
-                    'min': math.log(16),
-                    'max': math.log(256)
+                    'distribution': 'uniform',
+                    'min': 16,
+                    'max': 256
                 },
-                'lstm_like.dropout_rate': {
+                'lstm_like.dropout_rate_lstm_block': {
+                    'distribution': 'uniform',
+                    'min': 0.2,
+                    'max': 0.6
+                },
+                'lstm_like.dropout_rate_dense_layer': {
                     'distribution': 'uniform',
                     'min': 0.2,
                     'max': 0.6
@@ -160,37 +154,37 @@ for model in model_types:
 
         wandb.agent(sweep_id, function=train_func, count=100)
 
-    elif model == 'vgg_like':
+    elif model == 'gru_like':
         sweep_config = {
             'name': f"{model}-sweep",
-            'method': 'random',
+            'method': 'bayes',
             'metric': {
-                'name': 'val_acc',
+                'name': 'eval_acc',
                 'goal': 'maximize'
             },
             'parameters': {
                 'Trainer.total_epochs': {
-                    'values': [10]
+                    'values': [100]
                 },
                 'model_type':{
                     'values': [model]
                 },
-                'vgg_like.base_filters': {
+                'gru_like.base_filters': {
                     'distribution': 'q_log_uniform',
                     'q': 1,
                     'min': math.log(8),
                     'max': math.log(128)
                 },
-                'vgg_like.n_blocks': {
+                'gru_like.n_blocks': {
                     'values': [1]
                 },
-                'vgg_like.dense_units': {
+                'gru_like.dense_units': {
                     'distribution': 'q_log_uniform',
                     'q': 1,
                     'min': math.log(16),
                     'max': math.log(256)
                 },
-                'vgg_like.dropout_rate': {
+                'gru_like.dropout_rate': {
                     'distribution': 'uniform',
                     'min': 0.2,
                     'max': 0.6

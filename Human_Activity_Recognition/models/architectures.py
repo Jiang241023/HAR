@@ -2,6 +2,7 @@ import gin
 import tensorflow as tf
 from models.layers import lstm_block, gru_block, transformer_block
 from tensorflow.keras.regularizers import l2
+from transformers import TFBertModel
 
 @gin.configurable
 def lstm_like(n_classes, lstm_units, dense_units, n_blocks, dropout_rate_lstm_block, dropout_rate_dense_layer, input_shape = (128, 6)):
@@ -41,7 +42,6 @@ def gru_like(n_classes, gru_units, dense_units, n_blocks, dropout_rate, input_sh
     for _ in range(n_blocks - 1):
         x = gru_block(x)
     gru_out = tf.keras.layers.GRU(gru_units, return_sequences=True, kernel_regularizer=l2(1e-4))(x)
-
     x = tf.keras.layers.Flatten()(gru_out)
     x = tf.keras.layers.Dropout(dropout_rate)(x)
     x = tf.keras.layers.Dense(dense_units, kernel_regularizer=l2(1e-4))(x)
@@ -58,8 +58,16 @@ def transformer_like(n_classes, dense_units, n_blocks, dropout_rate, input_shape
     #Load the pretrained VGG16 model excluding the top classification layer
     assert n_blocks > 0
 
+    # Initialize the pretrained BERT model
+    bert_model = TFBertModel.from_pretrained('bert-base-uncased')
+
+    # Freeze all layers in Bert except the last ten
+    for layer in bert_model.layers[:-10]:
+        layer.trainable = False
+
     inputs = tf.keras.Input(shape=input_shape)
     x = inputs
+    x = bert_model(x)
 
     for _ in range(n_blocks):
         x = transformer_block(x)

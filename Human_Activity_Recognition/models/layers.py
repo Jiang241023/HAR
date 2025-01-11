@@ -20,7 +20,7 @@ def gru_block(inputs, gru_units, dropout_rate):
 
     return out
 
-#@gin.configurable
+@gin.configurable
 def transformer_block(inputs, num_heads, ff_dim, dropout_rate):
 
     # Multi-Head Attention

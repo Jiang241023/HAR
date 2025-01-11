@@ -6,21 +6,25 @@ import wandb
 
 @gin.configurable
 class Trainer(object):
-    def __init__(self, model, ds_train, ds_val, run_paths, batch_size, total_epochs, learning_rate):
+    def __init__(self, model, ds_train, ds_val, run_paths, batch_size, total_epochs):
         # Summary Writer
         # ....
 
         # Checkpoint Manager
         # ...
-        self.checkpoint = tf.train.Checkpoint(optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9),
+        lr_scheduler = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.001,
+                                                                 decay_steps=1000,
+                                                                 alpha=0.1)
+        self.checkpoint = tf.train.Checkpoint(optimizer = tf.keras.optimizers.Adam(lr_scheduler),
                                               model=model)
         self.checkpoint_manager = tf.train.CheckpointManager(self.checkpoint,
                                                              directory=run_paths["path_ckpts_train"],
                                                              max_to_keep = 1)
         # Loss objective
         self.loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False) # from_logits=False: output has already been processed through the sigmoid activation function.
-        #self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-        self.optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9) #=> 400 epochs: test accuracy
+
+        self.optimizer = tf.keras.optimizers.Adam(lr_scheduler)
+        #self.optimizer = tf.keras.optimizers.SGD(learning_rate=lr_scheduler, momentum=0.9) #=> 400 epochs: test accuracy
         #self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
         # Metrics
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')

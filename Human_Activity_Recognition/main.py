@@ -20,7 +20,7 @@ def random_seed(seed):
 random_seed(47)
 
 FLAGS = flags.FLAGS
-flags.DEFINE_boolean('train', False,'Specify whether to train or evaluate a model.')
+flags.DEFINE_boolean('train', True,'Specify whether to train or evaluate a model.')
 
 def train_model(model, ds_train, ds_val, batch_size, run_paths, path_model_id):
     print('-' * 88)
@@ -60,13 +60,6 @@ def main(argv):
         print(f"Batch data shape: {batch_data.shape}")
         print(f"Batch labels shape: {batch_labels.shape}")
 
-    # for name, dataset in datasets:
-    #     print(f"Processing the dataset of {name}...")
-    #     for window_data, window_labels in dataset.take(1):
-    #         print("Window Data Shape: ", window_data.shape)
-    #         print("Window Labels Shape :", window_labels.shape)
-    #         print("Window Labels : ", window_labels.numpy())
-    #         print("=" * 50)
     # model
     # model_1 = lstm_like(input_shape=(128, 6), n_classes=12)
 
