@@ -38,15 +38,10 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble, num_classes):
         # print(f"final_predictions(before argmax):{final_predictions}")
         predicted_labels = tf.argmax(final_predictions, axis=-1)
         true_labels = tf.cast(labels, tf.int64)
+        print(f"predicted labels: {predicted_labels}")
+        print(f"true labels: {true_labels}")
 
-        # filter out zero labels
-        non_zero_mask = tf.not_equal(true_labels, 0)
-        filtered_predicted_labels = tf.boolean_mask(predicted_labels, non_zero_mask) - 1
-        filtered_true_labels = tf.boolean_mask(true_labels, non_zero_mask) - 1
-        # print(f"filtered_predicted_labels:{filtered_predicted_labels.numpy()}")
-        # print(f"filtered_true_labels:{filtered_true_labels.numpy()}")
-
-        matches = tf.cast(filtered_predicted_labels == filtered_true_labels, tf.float32)
+        matches = tf.cast(predicted_labels == true_labels, tf.float32)
         if tf.size(matches) > 0:
             batch_accuracy = tf.reduce_mean(matches) # tf.reduce_mean([1 2 3 4 5]) => (1+2+3+4+5)/5 = 3
             accuracy_list.append(batch_accuracy.numpy())
@@ -54,7 +49,7 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble, num_classes):
             print("No non-zero labels in this batch. Skipping accuracy calculation.")
 
         # Update confusion matrix metrics
-        metrics.update_state(filtered_true_labels, filtered_predicted_labels)
+        metrics.update_state(predicted_labels, true_labels)
 
     # Calculate accuracy
     accuracy = 100 * sum(accuracy_list) / len(accuracy_list)

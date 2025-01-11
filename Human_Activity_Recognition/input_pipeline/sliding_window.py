@@ -27,8 +27,8 @@ def sliding_window(dataset, window_size =128, overlap = 0.5, primary_threshold=0
         dominant_count = tf.reduce_max(counts)
         proportion = tf.cast(dominant_count, tf.float32) / tf.size(label_window, out_type=tf.float32)
 
-        tf.print("Window unique labels:", unique_labels, "Counts:", counts)
-        tf.print("Dominant label:", dominant_label, "Proportion:", proportion)
+        # tf.print("Window unique labels:", unique_labels, "Counts:", counts)
+        # tf.print("Dominant label:", dominant_label, "Proportion:", proportion)
 
         # Assign zero for ambiguous windows
         if dominant_label < 7 and proportion < primary_threshold:

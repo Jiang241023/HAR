@@ -57,3 +57,9 @@ def create_label_tensor(segments, total_time_steps):
       # Update label_array
       label_tensor[start_idx:end_idx] = activity_id
     return label_tensor
+
+def remap_labels(dataset):
+    """
+    Remap labels from (1,2,3,...,12) to (0,1,....11)
+    """
+    return dataset.map(lambda data, label: (data, label - 1))
