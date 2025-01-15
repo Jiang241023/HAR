@@ -28,7 +28,7 @@ class ConfusionMatrix(tf.keras.metrics.Metric):
         matrix = self.matrix.numpy()
 
         if normalize:
-            print(f"matrix: {matrix}")
+            # print(f"matrix: {matrix}")
             matrix = matrix.astype('float') / matrix.sum(axis = 1, keepdims = True) # Normalize the matrix in each row
             matrix = np.nan_to_num(matrix) # Replace NaN with 0
 
