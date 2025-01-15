@@ -38,8 +38,8 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble, num_classes):
         # print(f"final_predictions(before argmax):{final_predictions}")
         predicted_labels = tf.argmax(final_predictions, axis=-1)
         true_labels = tf.cast(labels, tf.int64)
-        print(f"predicted labels: {predicted_labels}")
-        print(f"true labels: {true_labels}")
+        # print(f"predicted labels: {predicted_labels}")
+        # print(f"true labels: {true_labels}")
 
         matches = tf.cast(predicted_labels == true_labels, tf.float32)
         if tf.size(matches) > 0:

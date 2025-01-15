@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def sliding_window(dataset, window_size =128, overlap = 0.5, primary_threshold=0.85 , transition_threshold = 0.45):
+def sliding_window(dataset, window_size =128, overlap = 0.5, primary_threshold=0.8 , transition_threshold = 0.3):
 
     # Convert data and labels into tf.data.Dataset object
     step_size = int(window_size*(1 - overlap))
@@ -8,7 +8,7 @@ def sliding_window(dataset, window_size =128, overlap = 0.5, primary_threshold=0
     # Create the sliding window -> returns each window as dataset objects containing elements in that window
     dataset = dataset.window(size=window_size, shift=step_size, drop_remainder=True)
 
-    # Pair data and laberls within each window
+    # Pair data and labels within each window -> converts each nested dataset (a window) into a single tensor
     def process_window(data_window, label_window):
         data_window = data_window.batch(window_size, drop_remainder=True)
         label_window = label_window.batch(window_size, drop_remainder=True)

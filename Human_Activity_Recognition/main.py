@@ -38,19 +38,19 @@ def train_model(model, ds_train, ds_val, batch_size, run_paths, path_model_id):
 def main(argv):
 
     # generate folder structures
-    # run_paths_1 = utils_params.gen_run_folder(path_model_id = 'lstm_like')
-    run_paths_2 = utils_params.gen_run_folder(path_model_id = 'gru_like')
+    run_paths_1 = utils_params.gen_run_folder(path_model_id = 'lstm_like')
+    # run_paths_2 = utils_params.gen_run_folder(path_model_id = 'gru_like')
     # run_paths_3 = utils_params.gen_run_folder(path_model_id = 'transformer_like')
 
     # set loggers
-    # utils_misc.set_loggers(run_paths_1['path_logs_train'], logging.INFO)
-    utils_misc.set_loggers(run_paths_2['path_logs_train'], logging.INFO)
+    utils_misc.set_loggers(run_paths_1['path_logs_train'], logging.INFO)
+    # utils_misc.set_loggers(run_paths_2['path_logs_train'], logging.INFO)
     # utils_misc.set_loggers(run_paths_3['path_logs_train'], logging.INFO)
 
     # gin-config
     gin.parse_config_files_and_bindings([r'E:\DL_LAB_HAPT\HAR\Human_Activity_Recognition\configs\config.gin'], [])
-    # utils_params.save_config(run_paths_1['path_gin'], gin.config_str())
-    utils_params.save_config(run_paths_2['path_gin'], gin.config_str())
+    utils_params.save_config(run_paths_1['path_gin'], gin.config_str())
+    # utils_params.save_config(run_paths_2['path_gin'], gin.config_str())
     # utils_params.save_config(run_paths_3['path_gin'], gin.config_str())
 
     # setup pipeline
@@ -61,9 +61,9 @@ def main(argv):
         print(f"Batch labels shape: {batch_labels.shape}")
 
     # model
-    # model_1 = lstm_like(input_shape=(128, 6), n_classes=12)
+    model_1 = lstm_like(input_shape=(128, 6), n_classes=12)
 
-    model_2 = gru_like(input_shape=(128, 6), n_classes=12)
+    # model_2 = gru_like(input_shape=(128, 6), n_classes=12)
     #
     # model_3= transformer_like(input_shape=(128, 6), n_classes=13)
 
@@ -71,27 +71,27 @@ def main(argv):
     if FLAGS.train:
 
         # Model_1
-        wandb.init(project='Human_Activity_Recognition', name=run_paths_2['model_id'],
+        wandb.init(project='Human_Activity_Recognition', name=run_paths_1['model_id'],
                     config=utils_params.gin_config_to_readable_dictionary(gin.config._CONFIG))# setup wandb
 
-        train_model(model = model_2,
+        train_model(model = model_1,
                     ds_train = ds_train,
                     ds_val = ds_val,
                     batch_size = batch_size,
-                    run_paths = run_paths_2,
-                    path_model_id = 'gru_like')
+                    run_paths = run_paths_1,
+                    path_model_id = 'lstm_like')
 
         wandb.finish()
 
         wandb.init(project='Human_Activity_Recognition', name='evaluation_phase',
                    config=utils_params.gin_config_to_readable_dictionary(gin.config._CONFIG))
 
-        evaluate(model_1=model_2, model_2= None, model_3=None, ds_test=ds_test, ensemble=False)
+        evaluate(model_1=model_1, model_2= None, model_3=None, ds_test=ds_test, ensemble=False)
         wandb.finish()
 
     else:
         checkpoint_path_1 = r'E:\DL_LAB_HAPT\HAR\experiments\run_2025-01-11T14-37-59-635246_gru_like\ckpts'
-        checkpoint_1 = tf.train.Checkpoint(model=model_2)
+        checkpoint_1 = tf.train.Checkpoint(model=model_1)
         latest_checkpoint_1 = tf.train.latest_checkpoint(checkpoint_path_1)
         if latest_checkpoint_1:
             print(f"Restoring from checkpoint_1: {latest_checkpoint_1}")

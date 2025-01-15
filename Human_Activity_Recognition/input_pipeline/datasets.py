@@ -7,7 +7,7 @@ from input_pipeline.sliding_window import sliding_window
 from input_pipeline.parse_labels import cal_exp_lengths, parse_labels, create_label_tensor, remap_labels
 import numpy as np
 import os
-import time
+#from visualization import visualize_data
 
 @gin.configurable
 def load(batch_size, name, data_dir, labels_file):
@@ -88,6 +88,8 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels , b
             datasets = oversample(data, labels,debug=debug)
         else:
             datasets = tf.data.Dataset.from_tensor_slices((data, labels))
+        print(f"datasets:{datasets.take(1)}")
+        # visualize_data(visualize_data, oversample= True)
         # Step 2 : Create sliding window
         dataset = sliding_window(datasets, window_size=window_size, overlap=overlap)
 
