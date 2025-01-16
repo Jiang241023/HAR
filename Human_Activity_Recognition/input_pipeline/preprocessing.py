@@ -63,7 +63,7 @@ def oversample(data, labels, debug=True):
 
         # Determine oversampling size
         if label in [7]: # Special handling for label 7
-            oversample_size = max_transition_activity + 30000 - activity_counts_dict[label]
+            oversample_size = max_transition_activity + 40000 - activity_counts_dict[label]
         elif label < 7:
             oversample_size = max_activity - activity_counts_dict[label]
         else:
