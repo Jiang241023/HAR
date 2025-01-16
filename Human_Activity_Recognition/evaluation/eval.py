@@ -62,7 +62,7 @@ def evaluate(model_1, model_2, model_3, ds_test, ensemble, num_classes):
 
     # Results
     matrix = metrics.result().numpy()
-    print(f"Evaluation_accuracy: {accuracy:6f}")
+    print(f"Evaluation_accuracy: {accuracy:6f}%")
     print("Confusion Matrix:")
     print(matrix)
 

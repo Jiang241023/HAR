@@ -24,19 +24,19 @@ def sliding_window(dataset, window_size =128, overlap = 0.5, primary_threshold=0
 
         # Calculate dominant label and its proportion
         dominant_label = tf.cast(unique_labels[tf.argmax(counts)], tf.int32)  # Ensure int32 dtype
-        dominant_count = tf.reduce_max(counts)
-        proportion = tf.cast(dominant_count, tf.float32) / tf.size(label_window, out_type=tf.float32)
+        # dominant_count = tf.reduce_max(counts)
+        # proportion = tf.cast(dominant_count, tf.float32) / tf.size(label_window, out_type=tf.float32)
 
         # tf.print("Window unique labels:", unique_labels, "Counts:", counts)
         # tf.print("Dominant label:", dominant_label, "Proportion:", proportion)
 
         # Assign zero for ambiguous windows
-        if dominant_label < 7 and proportion < primary_threshold:
-            return data_window, tf.constant(0, dtype=tf.int32)
-        elif dominant_label >= 7 and proportion < transition_threshold:
-            return data_window, tf.constant(0, dtype=tf.int32)
-        else:
-            return data_window, dominant_label
+        # if dominant_label < 7 and proportion < primary_threshold:
+        #     return data_window, tf.constant(0, dtype=tf.int32)
+        # elif dominant_label >= 7 and proportion < transition_threshold:
+        #     return data_window, tf.constant(0, dtype=tf.int32)
+        # else:
+        return data_window, dominant_label
 
     # Apply label assignment and flatten the dataset to create the window tensor
     dataset = dataset.flat_map(process_window)

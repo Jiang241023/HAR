@@ -2,25 +2,94 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from menuinst.win32 import folder_path
+
 
 np.random.seed(42)  # Make sure that we can get the same color every time
 
-def visualize_data(dataset=None, oversample = False, folder_path_raw_data = None):
+# Function to convert TensorFlow dataset to NumPy arrays
+def dataset_to_numpy_array(dataset, num_samples=100):
+    """
+    Convert the first `num_samples` from a TensorFlow dataset to NumPy arrays.
+    """
+    data_list = []
+    labels_list = []
+
+    for data, label in dataset.take(num_samples):  # Take only the first `num_samples`
+        data_list.append(data.numpy())
+        labels_list.append(label.numpy())
+
+    # Convert to NumPy arrays
+    data_array = np.array(data_list)
+    labels_array = np.array(labels_list)
+    # Debug: Print the shapes of the arrays
+    print(f"Shape of data_array: {data_array.shape}")
+    print(f"Shape of labels_array: {labels_array.shape}")
+
+    return data_array, labels_array
+
+def visualize_data(dataset, oversample, data_path=None, all_files=None, folder_path_raw_data=None, acc_data=None, gyro_data=None):
 
     if oversample:
-        pass
+        # Step 1: Convert TensorFlow dataset to NumPy arrays
+        num_samples_to_visualize=100000
+        # Step 1: Convert TensorFlow dataset to NumPy arrays
+        data_array, labels_array = dataset_to_numpy_array(dataset, num_samples=num_samples_to_visualize)
+
+        # Step 2: Split accelerometer and gyrometer data
+        acc_data = data_array[:, :3]  # First 3 columns are accelerometer data
+        gyro_data = data_array[:, 3:]  # Last 3 columns are gyrometer data
+
+        # Step 3: Get unique activities and assign colors
+        unique_acts = np.unique(labels_array)
+        cmap = plt.get_cmap("tab20", len(unique_acts))
+        color_map = {act_id: cmap(i) if i != 6 else "#8B0000" for i, act_id in enumerate(unique_acts)}
+
+        # Step 4: Create the figure
+        fig = plt.figure(figsize=(18, 8))
+
+        # Top plot: Accelerometer data
+        acc_plot = fig.add_subplot(2, 1, 1)
+        time_steps = np.arange(acc_data.shape[0])  # Number of samples as time steps
+
+        for i in range(3):  # Plot X, Y, Z data
+            color = ['red', 'green', 'blue']
+            column_data = acc_data[:, i]  # Get data for X, Y, Z
+            acc_plot.plot(time_steps, column_data, color=color[i], label=f"Acc {['X', 'Y', 'Z'][i]}")
+
+        # Add patches for activities
+        for idx, act_id in enumerate(labels_array):  # Highlight segments by activity
+            c = color_map[act_id]
+            acc_plot.axvspan(idx - 0.5, idx + 0.5, color=c, alpha=0.3)
+
+        acc_plot.set_title("Accelerometer Data (Oversampled)")
+        acc_plot.legend()
+
+        # Bottom plot: Gyrometer data
+        gyro_plot = fig.add_subplot(2, 1, 2)
+        for i in range(3):  # Plot X, Y, Z data
+            color = ['red', 'green', 'blue']
+            column_data = gyro_data[:, i]  # Get data for X, Y, Z
+            gyro_plot.plot(time_steps, column_data, color=color[i], label=f"Gyro {['X', 'Y', 'Z'][i]}")
+
+        # Add patches for activities
+        for idx, act_id in enumerate(labels_array):  # Highlight segments by activity
+            c = color_map[act_id]
+            gyro_plot.axvspan(idx - 0.5, idx + 0.5, color=c, alpha=0.3)
+
+        gyro_plot.set_title("Gyrometer Data (Oversampled)")
+        gyro_plot.legend()
+
+        # Add activity legend
+        legend_patches = [
+            patches.Patch(color=color_map[act_id], label=f"Activity {act_id}") for act_id in unique_acts
+        ]
+        plt.legend(handles=legend_patches, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=5)
+
+        # Adjust subplot spacing and show the plot
+        plt.subplots_adjust(hspace=0.5)
+        plt.show()
+
     else:
-        data_path = r"E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData"
-        all_files = r"E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set"
-
-        acc_file = os.path.join(data_path, "acc_exp01_user01.txt")
-        acc_data = np.loadtxt(acc_file)
-        print("Accelerometer data shape:", acc_data.shape)
-
-        gyro_file = os.path.join(data_path, "gyro_exp01_user01.txt")
-        gyro_data = np.loadtxt(gyro_file)
-        print("Gyrometer data shape:", gyro_data.shape)
 
         label_files = os.path.join(data_path, "labels.txt")
         labels = np.loadtxt(label_files, dtype=int)
@@ -54,7 +123,10 @@ def visualize_data(dataset=None, oversample = False, folder_path_raw_data = None
         cmap = plt.get_cmap("tab20", len(unique_acts))
         color_map = {}
         for i, act_id in enumerate(unique_acts):
-            color_map[act_id] = cmap(i)
+            if i != 6:
+                color_map[act_id] = cmap(i)
+            else:
+                color_map[act_id] = "#8B0000"
         # print(f"color_map: {color_map}")
 
         fig = plt.figure(figsize=(18, 6))
@@ -86,9 +158,9 @@ def visualize_data(dataset=None, oversample = False, folder_path_raw_data = None
             # acc_plot.plot(t_segment, x_segment, color="Green")
             # acc_plot.plot(t_segment, y_segment, color="Blue")
             # acc_plot.plot(t_segment, z_segment, color="Red")
-            acc_plot.axvspan(start_idx, end_idx, color=c, alpha=0.3)
+            acc_plot.axvspan(start_idx, end_idx, color=c, alpha=0.8)
 
-        acc_plot.set_title("Accelerometer for exp01 (all activities) without white space")
+        acc_plot.set_title("Accelerometer for exp01 (all activities)")
 
         # Middle plot is for gyrometer data
         gyro_plot = fig.add_subplot(3,1,2)
@@ -117,9 +189,9 @@ def visualize_data(dataset=None, oversample = False, folder_path_raw_data = None
             # gyro_plot.plot(t_segment, x_segment, color="Green")
             # gyro_plot.plot(t_segment, y_segment, color="Blue")
             # gyro_plot.plot(t_segment, z_segment, color="Red")
-            gyro_plot.axvspan(start_idx, end_idx, color=c, alpha=0.3)
+            gyro_plot.axvspan(start_idx, end_idx, color=c, alpha=0.8)
 
-        gyro_plot.set_title("Gyrometer for exp01 (all activities) without white space")
+        gyro_plot.set_title("Gyrometer for exp01 (all activities)")
 
         # Bottom plot is for the bar
         bar_plot = fig.add_subplot(3, 1, 3)
@@ -141,7 +213,7 @@ def visualize_data(dataset=None, oversample = False, folder_path_raw_data = None
                 1.0,  # height (entire subplot)
                 facecolor=c,
                 edgecolor="black",
-                alpha=0.3 # transparency
+                alpha=0.8 # transparency
             )
             bar_plot.add_patch(rect)
 
@@ -169,7 +241,18 @@ def visualize_data(dataset=None, oversample = False, folder_path_raw_data = None
         plt.show()
 
 if __name__ == "__main__":
+    data_path = r"E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData"
+    all_files = r"E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set"
+    acc_file = os.path.join(data_path, "acc_exp01_user01.txt")
+    acc_data = np.loadtxt(acc_file)
+    print("Accelerometer data shape:", acc_data.shape)
+
+    gyro_file = os.path.join(data_path, "gyro_exp01_user01.txt")
+    gyro_data = np.loadtxt(gyro_file)
+    print("Gyrometer data shape:", gyro_data.shape)
     folder_path_raw_data = r'E:\DL_LAB_HAPT\visualization_raw_data'
 
-    visualize_data(oversample = False, folder_path_raw_data = folder_path_raw_data)
+    visualize_data(oversample = False, dataset = None, data_path = data_path, all_files = all_files,
+                   folder_path_raw_data = folder_path_raw_data, acc_data = acc_data,
+                   gyro_data = gyro_data)
 
