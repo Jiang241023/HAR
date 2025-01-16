@@ -2,10 +2,11 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from menuinst.win32 import folder_path
 
 np.random.seed(42)  # Make sure that we can get the same color every time
 
-def visualize_data(dataset=None, oversample = False):
+def visualize_data(dataset=None, oversample = False, folder_path_raw_data = None):
 
     if oversample:
         pass
@@ -16,6 +17,10 @@ def visualize_data(dataset=None, oversample = False):
         acc_file = os.path.join(data_path, "acc_exp01_user01.txt")
         acc_data = np.loadtxt(acc_file)
         print("Accelerometer data shape:", acc_data.shape)
+
+        gyro_file = os.path.join(data_path, "gyro_exp01_user01.txt")
+        gyro_data = np.loadtxt(gyro_file)
+        print("Gyrometer data shape:", gyro_data.shape)
 
         label_files = os.path.join(data_path, "labels.txt")
         labels = np.loadtxt(label_files, dtype=int)
@@ -55,31 +60,69 @@ def visualize_data(dataset=None, oversample = False):
         fig = plt.figure(figsize=(18, 6))
 
         # Top plot is for accelerometer data
-        acc_plot = fig.add_subplot(2,1,1)
+        acc_plot = fig.add_subplot(3,1,1)
+
+        # Get the accelerometer data for x, y and z axis
+        for i in range(3):
+            color = ['red', 'green', 'blue']
+            column_data = acc_data[:, i]
+            plt.plot(np.arange(len(column_data)), column_data, color=color[i])
 
         # Iterate over all rows (segments), plotting one small segment at a time.
         for row in labels_exp1:
             _, _, act_id, start_idx, end_idx = row
 
-            # Get the acc_data
-            x_segment = acc_data[start_idx:end_idx, 0]
-            y_segment = acc_data[start_idx:end_idx, 1]
-            z_segment = acc_data[start_idx:end_idx, 2]
+            # # Get the acc_data
+            # x_segment = acc_data[start_idx:end_idx, 0]
+            # y_segment = acc_data[start_idx:end_idx, 1]
+            # z_segment = acc_data[start_idx:end_idx, 2]
+
             #print(f"x_segment shape: {x_segment.shape}")
-            t_segment = time_steps[start_idx:end_idx]
+            # t_segment = time_steps[start_idx:end_idx]
 
             # Use different colors to distinguish activities
             c = color_map[act_id]
 
-            acc_plot.plot(t_segment, x_segment, color="Green")
-            acc_plot.plot(t_segment, y_segment, color="Blue")
-            acc_plot.plot(t_segment, z_segment, color="Red")
+            # acc_plot.plot(t_segment, x_segment, color="Green")
+            # acc_plot.plot(t_segment, y_segment, color="Blue")
+            # acc_plot.plot(t_segment, z_segment, color="Red")
             acc_plot.axvspan(start_idx, end_idx, color=c, alpha=0.3)
 
         acc_plot.set_title("Accelerometer for exp01 (all activities) without white space")
 
+        # Middle plot is for gyrometer data
+        gyro_plot = fig.add_subplot(3,1,2)
+
+        # Get the gyrometer data for x, y and z axis
+        for i in range(3):
+            color = ['red', 'green', 'blue']
+            column_data = gyro_data[:, i]
+            plt.plot(np.arange(len(column_data)), column_data, color=color[i])
+
+        # Iterate over all rows (segments), plotting one small segment at a time.
+        for row in labels_exp1:
+            _, _, act_id, start_idx, end_idx = row
+
+            # # Get the acc_data
+            # x_segment = gyro_data[start_idx:end_idx, 0]
+            # y_segment = gyro_data[start_idx:end_idx, 1]
+            # z_segment = gyro_data[start_idx:end_idx, 2]
+
+            # print(f"x_segment shape: {x_segment.shape}")
+            # t_segment = time_steps[start_idx:end_idx]
+
+            # Use different colors to distinguish activities
+            c = color_map[act_id]
+
+            # gyro_plot.plot(t_segment, x_segment, color="Green")
+            # gyro_plot.plot(t_segment, y_segment, color="Blue")
+            # gyro_plot.plot(t_segment, z_segment, color="Red")
+            gyro_plot.axvspan(start_idx, end_idx, color=c, alpha=0.3)
+
+        gyro_plot.set_title("Gyrometer for exp01 (all activities) without white space")
+
         # Bottom plot is for the bar
-        bar_plot = fig.add_subplot(2, 1, 2)
+        bar_plot = fig.add_subplot(3, 1, 3)
 
         num_acts = len(unique_acts)
         fraction_block_width = 1.0 / num_acts  # fraction of the subplot width per activity
@@ -113,8 +156,20 @@ def visualize_data(dataset=None, oversample = False):
 
         # Adjust subplot spacing so the text at bottom is visible
         plt.subplots_adjust(hspace=0.8, bottom=0.1)
-        plt.show()
-if __name__ == "__main__":
 
-    visualize_data(oversample = False)
+        # Save the plot to the path (folder_path_raw_data)
+        if folder_path_raw_data:
+            os.makedirs(folder_path_raw_data, exist_ok=True)
+            file_path = os.path.join(folder_path_raw_data, "visualization_raw_data.png")
+            plt.savefig(file_path)
+            print(f"plot saved to:{file_path}")
+        else:
+            raise ValueError
+
+        plt.show()
+
+if __name__ == "__main__":
+    folder_path_raw_data = r'E:\DL_LAB_HAPT\visualization_raw_data'
+
+    visualize_data(oversample = False, folder_path_raw_data = folder_path_raw_data)
 
