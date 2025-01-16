@@ -8,7 +8,7 @@ import seaborn as sns
 class ConfusionMatrix(tf.keras.metrics.Metric):
     def __init__(self, num_classes, name, labels_name, save_path, **kwargs):
         super(ConfusionMatrix, self).__init__(name=name, **kwargs)
-        self.num_classes = num_classes-1
+        self.num_classes = num_classes
         self.labels_name = labels_name
         self.save_path = save_path
         self.matrix = tf.Variable(initial_value=tf.zeros((self.num_classes, self.num_classes), dtype=tf.float32), dtype=tf.float32)
@@ -28,6 +28,7 @@ class ConfusionMatrix(tf.keras.metrics.Metric):
         matrix = self.matrix.numpy()
 
         if normalize:
+            # print(f"matrix: {matrix}")
             matrix = matrix.astype('float') / matrix.sum(axis = 1, keepdims = True) # Normalize the matrix in each row
             matrix = np.nan_to_num(matrix) # Replace NaN with 0
 

@@ -6,22 +6,26 @@ import wandb
 
 @gin.configurable
 class Trainer(object):
-    def __init__(self, model, ds_train, ds_val, run_paths, batch_size, total_epochs, learning_rate):
-        # Summary Writer
-        # ....
+    def __init__(self, model, ds_train, ds_val, run_paths, batch_size, total_epochs):
 
-        # Checkpoint Manager
-        # ...
-        self.checkpoint = tf.train.Checkpoint(optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9),
+        lr_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(
+                                                                    initial_learning_rate=0.001,
+                                                                    decay_steps=total_epochs,
+                                                                    end_learning_rate=0.0001,
+                                                                    power=2  # Power=1.0 indicates linear decay, and power=2.0 indicates squared decay.
+                                                                    )
+        self.optimizer = tf.keras.optimizers.Adam(lr_scheduler)
+        #self.optimizer = tf.keras.optimizers.SGD(learning_rate=lr_scheduler, momentum=0.9)
+        #self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
+        self.checkpoint = tf.train.Checkpoint(optimizer = self.optimizer,
                                               model=model)
         self.checkpoint_manager = tf.train.CheckpointManager(self.checkpoint,
                                                              directory=run_paths["path_ckpts_train"],
                                                              max_to_keep = 1)
         # Loss objective
         self.loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False) # from_logits=False: output has already been processed through the sigmoid activation function.
-        #self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-        self.optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9) #=> 400 epochs: test accuracy
-        #self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
+
+
         # Metrics
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
@@ -39,40 +43,42 @@ class Trainer(object):
         #self.ckpt_interval = ckpt_interval
 
         # Define class weight
-        self.class_weights = { 0: 0, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 4, 8: 4, 9: 4, 10: 4, 11: 4, 12: 4}
+       # self.class_weights = { 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 3, 7: 3, 8: 3, 9: 2, 10: 2, 11: 2}
 
-        self.class_weight_tensor = tf.constant([self.class_weights[i] for i in range(len(self.class_weights))],
-                                           dtype=tf.float32)
+       # self.class_weight_tensor = tf.constant([self.class_weights[i] for i in range(len(self.class_weights))],
+       #                                    dtype=tf.float32)
 
     @tf.function
     def train_step(self, data, labels):
 
-        class_weights = tf.gather(self.class_weight_tensor, labels)
-        sample_weights = tf.cast(labels > 0, dtype=tf.float32) * class_weights
+        #class_weights = tf.gather(self.class_weight_tensor, labels)
+        #sample_weights = tf.cast(labels, dtype=tf.float32) * class_weights
+        # sample_weights = tf.cast(labels > 0, dtype=tf.float32)
 
         with tf.GradientTape() as tape:
             # training=True is only needed if there are layers with different
             # behavior during training versus inference (e.g. Dropout).
             predictions = self.model(data, training=True)
-            loss = self.loss_object(labels, predictions, sample_weight=sample_weights)
+            loss = self.loss_object(labels, predictions)
         gradients = tape.gradient(loss, self.model.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
 
         self.train_loss(loss)
-        self.train_accuracy(labels, predictions, sample_weight = sample_weights)
+        self.train_accuracy(labels, predictions)
 
     @tf.function
     def validation_step(self, data, labels):
         # training=False is only needed if there are layers with different
         # behavior during training versus inference (e.g. Dropout).
-        class_weights = tf.gather(self.class_weight_tensor, labels)
-        sample_weights = tf.cast(labels > 0, dtype=tf.float32) * class_weights
+        # class_weights = tf.gather(self.class_weight_tensor, labels)
+        # sample_weights = tf.cast(labels, dtype=tf.float32) * class_weights
+        # sample_weights = tf.cast(labels > 0, dtype=tf.float32)
 
         predictions = self.model(data, training=False)
-        val_loss = self.loss_object(labels, predictions, sample_weight=sample_weights)
+        val_loss = self.loss_object(labels, predictions)
 
         self.val_loss(val_loss)
-        self.val_accuracy(labels, predictions, sample_weight=sample_weights)
+        self.val_accuracy(labels, predictions)
 
 
     def train(self):

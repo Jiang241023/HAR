@@ -10,48 +10,108 @@ def preprocess(data):
     return (data - mean)/ std
 
 
-def augment(data, label):
-    # jitter = tf.random.uniform(data.shape, minval=-0.1, maxval=0.1)
-    # scaled_data = data + jitter
-    scaled_data = data
-    # scale_factor = tf.random.uniform([], minval=0.9, maxval=1.1)
-    # scaled_data = scaled_data * scale_factor
-    return scaled_data, label
+# def augment(data, label):
+#     # jitter = tf.random.uniform(data.shape, minval=-0.1, maxval=0.1)
+#     # scaled_data = data + jitter
+#     scaled_data = data
+#     # scale_factor = tf.random.uniform([], minval=0.9, maxval=1.1)
+#     # scaled_data = scaled_data * scale_factor
+#     return scaled_data, label
 
-def oversample_and_augment(data,label, minority_classes=None, oversample_factor = 2):
-    # seperate data into minority and majority class
-    minority_indices = tf.where(tf.reduce_any([label == c for c in minority_classes], axis = 0))
-    majority_indices = tf.where(~tf.reduce_any([label == c for c in minority_classes], axis = 0))
+def oversample(data, labels, debug=True):
+    """
+    Efficiently oversample the dataset by iterating through labels and checking sizes before oversampling.
 
-    minority_data = tf.gather(data, minority_indices)
-    minority_labels = tf.gather(label, minority_indices)
+    Args:
+        data: Tensor of input data.
+        labels: Tensor of corresponding labels.
+        debug: Boolean to enable debug information.
 
-    majority_data = tf.gather(data, majority_indices)
-    majority_labels = tf.gather(data,majority_indices)
+    Returns:
+        tf.data.Dataset: Oversampled dataset with consistent shapes and original order.
+    """
+    # Ensure labels are 1D
+    labels = tf.squeeze(labels)
 
-    # Repeat and augment the minority class samples
-    oversampled_data = tf.repeat(minority_data, repeats= oversample_factor, axis = 0)
-    oversampled_labels = tf.repeat(minority_labels, repeats = oversample_factor , axis = 0)
+    # Get unique activities and their counts
+    activities,_, activity_counts = tf.unique_with_counts(labels)
 
-    def augment_ov(data, label):
-        jitter = tf.random.uniform(data.shape, minval=-0.1, maxval=0.1)
-        scaled_data = data + jitter
-        scale_factor = tf.random.uniform([], minval=0.9,maxval=1.1)
-        scaled_data = scaled_data * scale_factor
-        return scaled_data, label
+    # Determine max counts for majority and minority classes
+    primary_mask = activities < 7
+    max_activity = tf.reduce_max(tf.boolean_mask(activity_counts, primary_mask))  # Max count of majority labels
+    max_transition_activity = tf.reduce_max(tf.boolean_mask(activity_counts, ~primary_mask)) + 80000  # Max count of minority labels
 
-    oversampled_data , oversampled_labels = tf.map_fn(lambda x: augment(x[0], x[1]),(oversampled_data, oversampled_labels),
-                                                      fn_output_signature =(tf.TensorSpec(shape=data.shape[1:], dtype=data.dtype),
-                                                                            tf.TensorSpec(shape=label.shape[1:], dtype=label.dtype)))
-    combined_data = tf.concat([majority_data, oversampled_data], axis =0)
-    combined_labels = tf.concat([majority_labels, oversampled_labels], axis=0)
+    if debug:
+        print(f"Max activity for primary labels (majority): {max_activity.numpy()}")
+        print(f"Max activity for transition labels (minority): {max_transition_activity.numpy()}")
 
-    # Sort the combined dataset by temporal order
-    sorted_indices = tf.argsort(tf.range(tf.shape(combined_data)[0]))
-    combined_data = tf.gather(combined_data, sorted_indices)
-    combined_labels = tf.gather(combined_labels)
+    # Initialize lists for oversampled data and labels
+    oversampled_data = []
+    oversampled_labels = []
 
-    return combined_data, combined_labels
+    # Dictionary to track oversampled counts for each activity
+    activity_counts_dict = {activity: 0 for activity in activities.numpy()}
+
+    # Iterate through all labels
+    for idx, label in enumerate(labels.numpy()):
+        # Skip if already oversampled
+        if activity_counts_dict[label] >= (max_activity if label < 7 else max_transition_activity):
+            continue
+
+        # Find indices for current label
+        activity_indices = tf.where(labels == label)[:, 0]
+
+        # Determine oversampling size
+        oversample_size = (
+            max_activity - activity_counts_dict[label]
+            if label < 7
+            else max_transition_activity - activity_counts_dict[label]
+        )
+        oversample_size = min(oversample_size, tf.shape(activity_indices)[0])  # Avoid oversampling beyond data
+
+        # Perform random sampling with replacement
+        sampled_indices = tf.random.uniform(
+            shape=[oversample_size], minval=0, maxval=tf.shape(activity_indices)[0], dtype=tf.int32
+        )
+        sampled_indices = tf.gather(activity_indices, sampled_indices)
+
+        # Gather oversampled data and labels
+        gathered_data = tf.gather(data, sampled_indices)
+        gathered_labels = tf.gather(labels, sampled_indices)
+
+        # Append to results
+        oversampled_data.append(gathered_data)
+        oversampled_labels.append(gathered_labels)
+
+        # Update counts
+        activity_counts_dict[label] += oversample_size
+
+        # Debug info
+        if debug and idx < 10:  # Limit debug to first 10 iterations
+            print(f"Label: {label}, Oversample Size: {oversample_size}")
+            print(f"Current Count: {activity_counts_dict[label]}")
+            print(f"Gathered Data Shape: {gathered_data.shape}")
+            print(f"Gathered Labels Shape: {gathered_labels.shape}")
+
+        # Break if all labels are oversampled to desired size
+        if all(
+            count >= (max_activity if activity < 7 else max_transition_activity)
+            for activity, count in activity_counts_dict.items()
+        ):
+            break
+
+    # Concatenate results
+    oversampled_data = tf.concat(oversampled_data, axis=0)
+    oversampled_labels = tf.concat(oversampled_labels, axis=0)
+
+    # Debug final shapes
+    if debug:
+        print(f"Final Oversampled Data Shape: {oversampled_data.shape}")
+        print(f"Final Oversampled Labels Shape: {oversampled_labels.shape}")
+        # print(f"activity_dictionary : {activity_counts_dict}")
+
+    # Create tf.data.Dataset
+    return tf.data.Dataset.from_tensor_slices((oversampled_data, oversampled_labels))
 
 
 

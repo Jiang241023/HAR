@@ -2,7 +2,7 @@ import gin
 import tensorflow as tf
 from tensorflow.keras.regularizers import l2
 
-@gin.configurable
+
 def lstm_block(inputs, lstm_units, dropout_rate):
 
     # LSTM Layer

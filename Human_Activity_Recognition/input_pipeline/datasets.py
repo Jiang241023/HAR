@@ -2,11 +2,12 @@ import gin
 from tensorflow.data.experimental import AUTOTUNE
 import tensorflow as tf
 import logging
-from input_pipeline.preprocessing import preprocess, augment, oversample_and_augment
+from input_pipeline.preprocessing import preprocess, oversample
 from input_pipeline.sliding_window import sliding_window
-from input_pipeline.parse_labels import cal_exp_lengths, parse_labels, create_label_tensor
+from input_pipeline.parse_labels import cal_exp_lengths, parse_labels, create_label_tensor, remap_labels
 import numpy as np
 import os
+#from visualization import visualize_data
 
 @gin.configurable
 def load(batch_size, name, data_dir, labels_file):
@@ -57,7 +58,7 @@ def load(batch_size, name, data_dir, labels_file):
 
     # Calculate cumulative lengths for splitting
     train_length = ds_train.shape[0]
-    val_length = ds_val.shape[0]
+    #val_length = ds_val.shape[0]
     test_length = ds_test.shape[0]
     # print(f"train_length:{train_length}")
     # print(f"val_length:{val_length}")
@@ -76,25 +77,36 @@ def load(batch_size, name, data_dir, labels_file):
 
 
 @gin.configurable
-def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, batch_size, ds_info=None, caching=True):
+def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels , batch_size):
     """Prepare datasets with preprocessing, batching, caching, and prefetching"""
-    def prepare_dataset(data, labels, batch_size, window_size =128, overlap = 0.5, shuffle_buffer = 1000, cache = True , is_training=True,
-                        minority_classes=None, oversample_factor=3):
+
+    def prepare_dataset(data, labels, batch_size, window_size =128, overlap = 0.5, shuffle_buffer = 64, cache = True , is_training=True, debug=False):
         # Step 1 : Normalize the data
         data = preprocess(data)
 
-        if is_training and minority_classes:
-            data, labels = oversample_and_augment(data, labels, minority_classes, oversample_factor=oversample_factor)
-
+        if is_training:
+            datasets = oversample(data, labels,debug=debug)
+        else:
+            datasets = tf.data.Dataset.from_tensor_slices((data, labels))
+        print(f"datasets:{datasets.take(1)}")
+        # visualize_data(visualize_data, oversample= True)
         # Step 2 : Create sliding window
-        dataset = sliding_window(data, labels, window_size=window_size, overlap=overlap)
+        dataset = sliding_window(datasets, window_size=window_size, overlap=overlap)
 
-        # Step 3 :
+        # Filter out window with label = 0:
+        dataset = dataset.filter(lambda _, label: label > 0)
+
+        # Step 3 : since previous steps are deterministic, caching is done before preprocessing
         if cache:
             dataset = dataset.cache()
 
-        if is_training:
-            dataset = dataset.map(augment , num_parallel_calls=tf.data.AUTOTUNE)
+        # if is_training:
+            # start_time = time.time()
+            # print("Augmenting data...")
+            # dataset = dataset.map(augment , num_parallel_calls=tf.data.AUTOTUNE)
+            # end_time = time.time()
+            # print(f"Completed.\nAugmented data shape: {data.shape}")
+            # print(f"Total time taken to augment data: {end_time - start_time} seconds")
 
         if is_training:
             dataset = dataset.shuffle(shuffle_buffer).repeat()
@@ -103,31 +115,12 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, ba
         return dataset
 
     # Prepare datasets
-    ds_train = prepare_dataset(ds_train, train_labels, batch_size, cache= True)
-    ds_val = prepare_dataset(ds_val, val_labels, batch_size, cache= True,is_training=False,)
-    ds_test = prepare_dataset(ds_test, train_labels, batch_size,cache= True,is_training=False,)
+    ds_train = prepare_dataset(ds_train, train_labels, batch_size, cache = True, debug=True)
+    ds_val = prepare_dataset(ds_val, val_labels, batch_size, cache = True, is_training=False)
+    ds_test = prepare_dataset(ds_test, test_labels, batch_size,cache = True, is_training=False)
+
+    ds_train = remap_labels(ds_train)
+    ds_val = remap_labels(ds_val)
+    ds_test = remap_labels(ds_test)
 
     return ds_train, ds_val, ds_test
-
-minority_classes = [7, 8, 9, 10, 11, 12]
-# data_dir = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData'
-# labels_file = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData\labels.txt'
-# name = "HAPT"
-# batch_size = 64
-#
-# ds_train, ds_val, ds_test, batch_size = load(batch_size, name, data_dir, labels_file)
-#
-# datasets = [
-#     ("train", ds_train),
-#     ("val", ds_val),
-#     ("test", ds_test)
-#     ]
-#
-# for name, dataset in datasets:
-#     print(f"Processing the dataset of {name}...")
-#     for window_data, window_labels in dataset.take(1):
-#         print("Window Data Shape: ", window_data.shape)
-#         print("Window Labels Shape :", window_labels.shape)
-#         print("Window Labels : ",window_labels.numpy())
-#         print("="*50)
-
