@@ -169,7 +169,7 @@ for model in model_types:
                 'model_type':{
                     'values': [model]
                 },
-                'gru_like.base_filters': {
+                'gru_like.gru_units': {
                     'distribution': 'q_log_uniform',
                     'q': 1,
                     'min': math.log(8),

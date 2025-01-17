@@ -62,11 +62,13 @@ def oversample(data, labels, debug=True):
         activity_indices = tf.where(labels == label)[:, 0]
 
         # Determine oversampling size
-        oversample_size = (
-            max_activity - activity_counts_dict[label]
-            if label < 7
-            else max_transition_activity - activity_counts_dict[label]
-        )
+        if label in [7]: # Special handling for label 7
+            oversample_size = max_transition_activity + 40000 - activity_counts_dict[label]
+        elif label < 7:
+            oversample_size = max_activity - activity_counts_dict[label]
+        else:
+            oversample_size = max_transition_activity - activity_counts_dict[label]
+
         oversample_size = min(oversample_size, tf.shape(activity_indices)[0])  # Avoid oversampling beyond data
 
         # Perform random sampling with replacement

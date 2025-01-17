@@ -44,11 +44,28 @@ def gru_like(n_classes, gru_units, dense_units, n_blocks, dropout_rate, input_sh
     print(f"input shape:{x.shape}")
     for _ in range(n_blocks - 1):
         x = gru_block(x)
-    gru_out = tf.keras.layers.GRU(gru_units, return_sequences=True, kernel_regularizer=l2(1e-4))(x)
-    # x = tf.keras.layers.Flatten()(gru_out)
+    gru_out = tf.keras.layers.GRU(gru_units, return_sequences=True,kernel_regularizer=l2(1e-4))(x)
+
+    # # Attention Mechanism
+    # attention_scores = tf.keras.layers.Dense(1, activation='tanh')(gru_out)  # Compute alignment scores
+    # print(f"attention_scores: {attention_scores}")
+    # attention_weights = tf.keras.layers.Softmax(axis=1)(attention_scores)  # Normalize scores
+    # print(f"attention_weights: {attention_weights}")
+    # context_vector = tf.keras.layers.Multiply()([gru_out, attention_weights])  # Weighted sum of GRU outputs
+    # print(f"context_vector (Weighted sum of GRU outputs): {context_vector}")
+    # context_vector = tf.keras.layers.Lambda(lambda x: tf.reduce_sum(x, axis=1))(context_vector)  # Sum along time axis
+    # print(f"context_vector (Weighted sum of GRU outputs): {context_vector}")
+    # print(f"Context vector shape: {context_vector.shape}")
+
+    # Pooling layers
     avg_pool = tf.keras.layers.GlobalAveragePooling1D()(gru_out)
+    print(f"avg_pool: {avg_pool}")
     max_pool = tf.keras.layers.GlobalMaxPooling1D()(gru_out)
+    print(f"max_pool: {max_pool}")
     x = tf.keras.layers.Concatenate()([avg_pool, max_pool])
+    print(f"x: {x}")
+
+    # Dense layers
     x = tf.keras.layers.Dropout(dropout_rate)(x)
     x = tf.keras.layers.Dense(dense_units, kernel_regularizer=l2(1e-4))(x)
     x = tf.keras.layers.LeakyReLU(alpha=0.01)(x)

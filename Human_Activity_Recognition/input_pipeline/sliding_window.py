@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def sliding_window(dataset, window_size =128, overlap = 0.5, primary_threshold=0.8 , transition_threshold = 0.3):
+def sliding_window(dataset, window_size =128, overlap = 0.5, primary_threshold=0.8 , transition_threshold = 0.27):
 
     # Convert data and labels into tf.data.Dataset object
     step_size = int(window_size*(1 - overlap))
