@@ -5,33 +5,30 @@ import wandb
 import gin
 
 @gin.configurable
-def evaluate(model_1, model_2, model_3, ds_test, ensemble, num_classes):
+def evaluate(model_1, model_2, ds_test, ensemble):
 
     metrics = ConfusionMatrix()
     accuracy_list = []
 
     for idx, (dataset, labels) in enumerate(ds_test):
-        threshold = 0.5
         if ensemble == True:
             # Model_1
             predictions_1 = model_1(dataset, training = False)
-            predictions_1 = tf.cast(predictions_1 > threshold, tf.int32)
+            predicted_labels_1 = tf.argmax(predictions_1, axis=-1)  # Class labels
+
 
             # Model_2
             predictions_2 = model_2(dataset, training=False)
-            predictions_2 = tf.cast(predictions_2 > threshold, tf.int32)
-
-            # Model_3
-            predictions_3 = model_3(dataset, training=False)
-            predictions_3 = tf.cast(predictions_3 > threshold, tf.int32)
+            predicted_labels_2 = tf.argmax(predictions_2, axis=-1)  # Class labels
 
             # final_predictions
-            votes = predictions_1 + predictions_2 + predictions_3  # Count votes (0, 1, or 2, or 3)
-
-            final_predictions = tf.cast(votes > 1, tf.int32)
+            votes = tf.stack([predicted_labels_1, predicted_labels_2], axis=1)  # Shape: (batch_size, 2)
+            print(f"votes:{votes}")
+            final_predictions = tf.reduce_sum(votes, axis=1) // 2  # Majority vote
+            print(f"final_predictions:{final_predictions}")
         else:
             # Model_1
-            final_predictions = model_1(dataset, training=False)
+            final_predictions = model_2(dataset, training=False)
             #print(f"final_predictions:{final_predictions}")
 
         # Convert predictions to class labels

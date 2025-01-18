@@ -5,7 +5,7 @@ import math
 
 import tensorflow as tf
 from input_pipeline.datasets import load
-from models.architectures import lstm_like
+from models.architectures import lstm_like, gru_like
 from train import Trainer
 from utils import utils_params, utils_misc
 
@@ -43,7 +43,7 @@ def evaluate(model, ds_test):
             print("No non-zero labels in this batch. Skipping accuracy calculation.")
 
     # Calculate accuracy
-    accuracy = sum(accuracy_list) / len(accuracy_list)
+    accuracy = 100*sum(accuracy_list) / len(accuracy_list)
 
     # Log the test accuracy to WandB
     wandb.log({'Evaluation_accuracy':accuracy})
@@ -78,22 +78,24 @@ def train_func():
 
         # Model
         if model_type == 'lstm_like':
-            model = lstm_like(input_shape=(128, 6), n_classes=13)
-        # elif model_type == 'vgg_like':
-        #     model, base_model = vgg_like(input_shape=ds_info["features"]["image"]["shape"],
-        #                                  n_classes=ds_info["features"]["label"]["num_classes"])
-        # elif model_type == 'inception_v2_like':
-        #     model, base_model = inception_v2_like(input_shape=ds_info["features"]["image"]["shape"],
-        #                                           n_classes=ds_info["features"]["label"]["num_classes"])
+            model = lstm_like(input_shape=(128, 6), n_classes=12)
+            train_model(model=model,
+                        ds_train=ds_train,
+                        ds_val=ds_val,
+                        batch_size=batch_size,
+                        run_paths=run_paths,
+                        path_model_id='lstm_like')
+        elif model_type == 'gru_like':
+            model = gru_like(input_shape=(128, 6), n_classes=12)
+            train_model(model=model,
+                        ds_train=ds_train,
+                        ds_val=ds_val,
+                        batch_size=batch_size,
+                        run_paths=run_paths,
+                        path_model_id='gru_like')
+
         else:
             raise ValueError
-
-        train_model(model = model,
-                    ds_train = ds_train,
-                    ds_val = ds_val,
-                    batch_size = batch_size,
-                    run_paths = run_paths,
-                    path_model_id = 'lstm_like')
 
         # Evaluate the model after training
         print(f"Evaluating {model_type} on the test dataset...")
@@ -104,7 +106,7 @@ def train_func():
         # Log the test accuracy to WandB
         wandb.log({'evaluation_accuracy': accuracy})
 
-model_types = ['lstm_like']
+model_types = ['gru_like', 'lstm_like']
 
 for model in model_types:
     if model == 'lstm_like':
@@ -112,30 +114,49 @@ for model in model_types:
             'name': f"{model}-sweep",
             'method': 'bayes',
             'metric': {
-                'name': 'eval_acc',
+                'name': 'val_acc',
                 'goal': 'maximize'
             },
             'parameters': {
                 'Trainer.total_epochs': {
-                    'values': [100]
+                    'values': [55]
+                },
+                'Trainer.poly_loss_alpha': {
+                    'distribution': 'uniform',
+                    'min': 0.1,
+                    'max': 1
+                },
+                'Trainer.rdrop_alpha': {
+                    'distribution': 'uniform',
+                    'min': 0.1,
+                    'max': 1
                 },
                 'model_type':{
                     'values': [model]
                 },
                 'lstm_like.lstm_units': {
-                    'distribution': 'uniform',
-                    'min': 8,
-                    'max': 128
+                    'distribution': 'q_uniform',
+                    'min': 32,
+                    'max': 128,
+                    'q': 1
                 },
+                # 'prepare.window_size': {
+                #     'distribution': 'q_uniform',
+                #     'min': 128,
+                #     'max': 256,
+                #     'q': 1
+                # },
                 'lstm_like.n_blocks': {
-                    'distribution': 'uniform',
+                    'distribution': 'q_uniform',
                     'min': 1,
-                    'max': 5
+                    'max': 3,
+                    'q': 1
                 },
                 'lstm_like.dense_units': {
-                    'distribution': 'uniform',
-                    'min': 16,
-                    'max': 256
+                    'distribution': 'q_uniform',  # Use q_uniform for quantized values
+                    'min': 32,
+                    'max': 256,
+                    'q': 1  # Step size, ensures only integers are selected
                 },
                 'lstm_like.dropout_rate_lstm_block': {
                     'distribution': 'uniform',
@@ -158,32 +179,56 @@ for model in model_types:
             'name': f"{model}-sweep",
             'method': 'bayes',
             'metric': {
-                'name': 'eval_acc',
+                'name': 'val_acc',
                 'goal': 'maximize'
             },
             'parameters': {
                 'Trainer.total_epochs': {
-                    'values': [100]
+                    'values': [50]
+                },
+                'Trainer.poly_loss_alpha': {
+                    'distribution': 'uniform',
+                    'min': 0.1,
+                    'max': 1
+                },
+                'Trainer.rdrop_alpha': {
+                    'distribution': 'uniform',
+                    'min': 0.1,
+                    'max': 1
                 },
                 'model_type':{
                     'values': [model]
                 },
                 'gru_like.gru_units': {
-                    'distribution': 'q_log_uniform',
-                    'q': 1,
-                    'min': math.log(8),
-                    'max': math.log(128)
+                    'distribution': 'q_uniform',
+                    'min': 32,
+                    'max': 128,
+                    'q': 1
                 },
+                # 'prepare.window_size': {
+                #     'distribution': 'q_uniform',
+                #     'min': 128,
+                #     'max': 256,
+                #     'q': 1
+                # },
                 'gru_like.n_blocks': {
-                    'values': [1]
+                    'distribution': 'q_uniform',
+                    'min': 1,
+                    'max': 3,
+                    'q': 1
                 },
                 'gru_like.dense_units': {
                     'distribution': 'q_log_uniform',
                     'q': 1,
-                    'min': math.log(16),
+                    'min': math.log(32),
                     'max': math.log(256)
                 },
-                'gru_like.dropout_rate': {
+                'gru_like.dropout_rate_gru_block': {
+                    'distribution': 'uniform',
+                    'min': 0.2,
+                    'max': 0.6
+                },
+                'gru_like.dropout_rate_dense_layer': {
                     'distribution': 'uniform',
                     'min': 0.2,
                     'max': 0.6

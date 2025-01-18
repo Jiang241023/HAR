@@ -67,10 +67,10 @@ def load(batch_size, name, data_dir, labels_file):
 
 
 @gin.configurable
-def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels , batch_size, labeling_mode="S2L"):
+def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels , batch_size, window_size = 128):
     """Prepare datasets with preprocessing, batching, caching, and prefetching"""
 
-    def prepare_dataset(data, labels, batch_size, window_size =128, overlap = 0.5, shuffle_buffer = 64, cache = True , is_training=True, debug=False, labeling_mode=labeling_mode):
+    def prepare_dataset(data, labels, batch_size, window_size, overlap = 0.5, shuffle_buffer = 64, cache = True , is_training=True, debug=False):
         # Step 1 : Normalize the data
         data = preprocess(data)
 
@@ -81,25 +81,14 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels , b
         print(f"datasets:{datasets.take(1)}")
         #visualize_data(datasets, oversample = True)
         # Step 2 : Create sliding window
-        dataset = sliding_window(datasets, window_size=window_size, overlap=overlap, labeling_mode=labeling_mode)
+        dataset = sliding_window(datasets, window_size=window_size, overlap=overlap)
 
         # Filter out window with label = 0:
-        if labeling_mode == 'S2L':
-            dataset = dataset.filter(lambda _, label: label > 0)
-        elif labeling_mode == "S2S":
-            dataset = dataset.filter(lambda _, label: tf.reduce_all(label > 0))
+        dataset = dataset.filter(lambda _, label: label > 0)
 
         # Step 3 : since previous steps are deterministic, caching is done before preprocessing
         if cache:
             dataset = dataset.cache()
-
-        # if is_training:
-            # start_time = time.time()
-            # print("Augmenting data...")
-            # dataset = dataset.map(augment , num_parallel_calls=tf.data.AUTOTUNE)
-            # end_time = time.time()
-            # print(f"Completed.\nAugmented data shape: {data.shape}")
-            # print(f"Total time taken to augment data: {end_time - start_time} seconds")
 
         if is_training:
             dataset = dataset.shuffle(shuffle_buffer).repeat()
@@ -108,9 +97,9 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels , b
         return dataset
 
     # Prepare datasets
-    ds_train = prepare_dataset(ds_train, train_labels, batch_size, cache = True, debug=True, labeling_mode=labeling_mode)
-    ds_val = prepare_dataset(ds_val, val_labels, batch_size, cache = True, is_training=False,labeling_mode=labeling_mode)
-    ds_test = prepare_dataset(ds_test, test_labels, batch_size,cache = True, is_training=False,labeling_mode=labeling_mode)
+    ds_train = prepare_dataset(ds_train, train_labels, batch_size, window_size, cache = True, debug=True)
+    ds_val = prepare_dataset(ds_val, val_labels, batch_size, window_size, cache = True, is_training=False)
+    ds_test = prepare_dataset(ds_test, test_labels, batch_size, window_size, cache = True, is_training=False)
 
     ds_train = remap_labels(ds_train)
     ds_val = remap_labels(ds_val)

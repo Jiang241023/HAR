@@ -6,13 +6,13 @@ import wandb
 
 @gin.configurable
 class Trainer(object):
-    def __init__(self, model, ds_train, ds_val, run_paths, batch_size, total_epochs,use_polyloss=False, poly_loss_alpha=2, use_rdrop=False, rdrop_alpha=0.1 ,labeling_mode= 'S2L'):
+    def __init__(self, model, ds_train, ds_val, run_paths, batch_size, total_epochs,use_polyloss=False, poly_loss_alpha=2, use_rdrop=False, rdrop_alpha=0.1):
 
         self.use_polyloss = use_polyloss
         self.poly_loss_alpha = poly_loss_alpha
         self.use_rdrop = use_rdrop
         self.rdrop_alpha = rdrop_alpha
-        self.labeling_mode = labeling_mode
+
 
         lr_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(
                                                                     initial_learning_rate=0.001,
@@ -78,9 +78,6 @@ class Trainer(object):
 
     @tf.function
     def train_step(self, data, labels):
-        # Reshape labels to match the output shape of the model
-        if self.labeling_mode == 'S2S':
-            labels = tf.reshape(labels, (tf.shape(data)[0], tf.shape(data)[1]))  # Shape: (batch_size, time_steps)
 
         #class_weights = tf.gather(self.class_weight_tensor, labels)
         #sample_weights = tf.cast(labels, dtype=tf.float32) * class_weights
@@ -109,9 +106,7 @@ class Trainer(object):
 
     @tf.function
     def validation_step(self, data, labels):
-        # Reshape labels to match the output shape of the model
-        if self.labeling_mode == 'S2S':
-            labels = tf.reshape(labels, (tf.shape(data)[0], tf.shape(data)[1]))  # Shape: (batch_size, time_steps)
+
         # training=False is only needed if there are layers with different
         # behavior during training versus inference (e.g. Dropout).
         # class_weights = tf.gather(self.class_weight_tensor, labels)

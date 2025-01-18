@@ -1,29 +1,19 @@
 # Architectures
-#lstm_like.lstm_units = 64
-#lstm_like.n_blocks = 4
-#lstm_like.dense_units = 128
-#lstm_like.dropout_rate_lstm_block = 0.3
-#lstm_like.dropout_rate_dense_layer = 0.3
+lstm_like.lstm_units = 64
+lstm_like.n_blocks = 2
+lstm_like.dense_units = 128
+lstm_like.dropout_rate_lstm_block = 0.3
+lstm_like.dropout_rate_dense_layer = 0.3
 
 gru_like.gru_units = 64
 gru_like.n_blocks = 2
 gru_like.dense_units = 128
-gru_like.dropout_rate = 0.5
-gru_like.labeling_mode = 'S2L'
-
-
-# Layers
-#layers.lstm_block.lstm_units = 32
-#layers.lstm_block.dropout_rate = 0.5
-
-layers.gru_block.gru_units = 64
-layers.gru_block.dropout_rate = 0.5
-
+gru_like.dropout_rate_gru_block = 0.5
+gru_like.dropout_rate_dense_layer = 0.5
 
 # Training
 Trainer.batch_size = 128
-Trainer.total_epochs = 55
-Trainer.labeling_mode = 'S2L'
+Trainer.total_epochs = 60
 Trainer.use_polyloss=True
 Trainer.poly_loss_alpha=1
 Trainer.use_rdrop=True
@@ -34,18 +24,14 @@ load.name = 'HAPT'
 load.data_dir = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData'
 load.labels_file = r'E:\DL_LAB_HAPT_DATASET\HAPT_Data_Set\RawData\labels.txt'
 load.batch_size = 128
-prepare.labeling_mode= "S2L"
-
-# Eval
-eval.evaluate.num_classes = 12
-
+#prepare.window_size = 128
 
 # Metrics
-metrics.ConfusionMatrix.num_classes = 12
-metrics.ConfusionMatrix.name = "confusion_matrix"
-metrics.ConfusionMatrix.labels_name = ['walking', 'walking_upstairs', 'walking_downstairs',
-                                        'sitting', 'standing', 'laying', 'stand-sit',
-                                       'sit-stand', 'sit-lie', 'lie-sit', 'stand-lie', 'lie-stand']
-metrics.ConfusionMatrix.save_path = r'E:\DL_LAB_HAPT\confusion_matrix\cm.png'
+#metrics.ConfusionMatrix.num_classes = 12
+#metrics.ConfusionMatrix.name = "confusion_matrix"
+#metrics.ConfusionMatrix.labels_name = ['walking', 'walking_upstairs', 'walking_downstairs',
+#                                        'sitting', 'standing', 'laying', 'stand-sit',
+#                                       'sit-stand', 'sit-lie', 'lie-sit', 'stand-lie', 'lie-stand']
+#metrics.ConfusionMatrix.save_path = r'E:\DL_LAB_HAPT\confusion_matrix\cm.png'
 
 

@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def sliding_window(dataset, window_size =128, overlap = 0.5, primary_threshold=0.8 , transition_threshold = 0.3 , labeling_mode="S2L"):
+def sliding_window(dataset, window_size =128, overlap = 0.5, primary_threshold=0.8 , transition_threshold = 0.3):
 
     # Convert data and labels into tf.data.Dataset object
     step_size = int(window_size*(1 - overlap))
@@ -38,13 +38,8 @@ def sliding_window(dataset, window_size =128, overlap = 0.5, primary_threshold=0
     # Apply label assignment and flatten the dataset to create the window tensor
     dataset = dataset.flat_map(process_window)
 
-    # Choose between S2L and S2S labeling
-    if labeling_mode == "S2L":
-        dataset = dataset.map(assign_label)
-    elif labeling_mode == "S2S":
-        dataset = dataset.map(lambda data_window, label_window: (data_window, label_window)) # Keep full label sequence
-    else:
-        raise ValueError("Invalid labeling mode. Choose 'S2L' or 'S2S'.")
+    dataset = dataset.map(assign_label)
+
 
     return dataset
 
