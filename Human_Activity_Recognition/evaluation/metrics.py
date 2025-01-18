@@ -42,4 +42,3 @@ class ConfusionMatrix(tf.keras.metrics.Metric):
         if self.save_path:
             plt.savefig(self.save_path)
             print(f"Confusion matrix saved to {self.save_path}")
-

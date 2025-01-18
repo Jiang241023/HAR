@@ -31,7 +31,7 @@ def visualize_data(dataset, oversample, data_path=None, all_files=None, folder_p
 
     if oversample:
         # Step 1: Convert TensorFlow dataset to NumPy arrays
-        num_samples_to_visualize=100000
+        num_samples_to_visualize=2500000
         # Step 1: Convert TensorFlow dataset to NumPy arrays
         data_array, labels_array = dataset_to_numpy_array(dataset, num_samples=num_samples_to_visualize)
 
@@ -144,20 +144,8 @@ def visualize_data(dataset, oversample, data_path=None, all_files=None, folder_p
         for row in labels_exp1:
             _, _, act_id, start_idx, end_idx = row
 
-            # # Get the acc_data
-            # x_segment = acc_data[start_idx:end_idx, 0]
-            # y_segment = acc_data[start_idx:end_idx, 1]
-            # z_segment = acc_data[start_idx:end_idx, 2]
-
-            #print(f"x_segment shape: {x_segment.shape}")
-            # t_segment = time_steps[start_idx:end_idx]
-
             # Use different colors to distinguish activities
             c = color_map[act_id]
-
-            # acc_plot.plot(t_segment, x_segment, color="Green")
-            # acc_plot.plot(t_segment, y_segment, color="Blue")
-            # acc_plot.plot(t_segment, z_segment, color="Red")
             acc_plot.axvspan(start_idx, end_idx, color=c, alpha=0.8)
 
         acc_plot.set_title("Accelerometer for exp01 (all activities)")
@@ -175,20 +163,8 @@ def visualize_data(dataset, oversample, data_path=None, all_files=None, folder_p
         for row in labels_exp1:
             _, _, act_id, start_idx, end_idx = row
 
-            # # Get the acc_data
-            # x_segment = gyro_data[start_idx:end_idx, 0]
-            # y_segment = gyro_data[start_idx:end_idx, 1]
-            # z_segment = gyro_data[start_idx:end_idx, 2]
-
-            # print(f"x_segment shape: {x_segment.shape}")
-            # t_segment = time_steps[start_idx:end_idx]
-
             # Use different colors to distinguish activities
             c = color_map[act_id]
-
-            # gyro_plot.plot(t_segment, x_segment, color="Green")
-            # gyro_plot.plot(t_segment, y_segment, color="Blue")
-            # gyro_plot.plot(t_segment, z_segment, color="Red")
             gyro_plot.axvspan(start_idx, end_idx, color=c, alpha=0.8)
 
         gyro_plot.set_title("Gyrometer for exp01 (all activities)")

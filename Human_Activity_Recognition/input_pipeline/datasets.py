@@ -40,13 +40,9 @@ def load(batch_size, name, data_dir, labels_file):
                 ds_test.append(combined)
 
         ds_train = tf.concat(ds_train, axis=0)  # aixs = 0 means vertical concatenation
-        # print(f'Completed.\nds_train shape: {ds_train.shape}')
-
         ds_val = tf.concat(ds_val, axis=0)
-        # print(f'Completed.\nds_val shape: {ds_val.shape}')
-
         ds_test = tf.concat(ds_test, axis=0)
-        # print(f'Completed.\nds_test shape: {ds_test.shape}')
+
 
     else:
         raise ValueError
@@ -58,29 +54,23 @@ def load(batch_size, name, data_dir, labels_file):
 
     # Calculate cumulative lengths for splitting
     train_length = ds_train.shape[0]
-    #val_length = ds_val.shape[0]
+
     test_length = ds_test.shape[0]
-    # print(f"train_length:{train_length}")
-    # print(f"val_length:{val_length}")
-    # print(f"test_length:{test_length}")
-    # Split label_tensor
+
     train_labels = label_tensor[:train_length]
     test_labels = label_tensor[train_length:train_length+test_length]
     val_labels = label_tensor[train_length + test_length:]
-    # print(f"train_labels:{train_labels}")
-    # print(f"test_labels:{test_labels}")
-    # print(f"val_labels:{val_labels}")
-    # Prepare
+
     ds_train, ds_val, ds_test = prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels, batch_size)
 
     return ds_train, ds_val, ds_test, batch_size
 
 
 @gin.configurable
-def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels , batch_size):
+def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels , batch_size, labeling_mode="S2L"):
     """Prepare datasets with preprocessing, batching, caching, and prefetching"""
 
-    def prepare_dataset(data, labels, batch_size, window_size =128, overlap = 0.5, shuffle_buffer = 64, cache = True , is_training=True, debug=False):
+    def prepare_dataset(data, labels, batch_size, window_size =128, overlap = 0.5, shuffle_buffer = 64, cache = True , is_training=True, debug=False, labeling_mode=labeling_mode):
         # Step 1 : Normalize the data
         data = preprocess(data)
 
@@ -89,14 +79,15 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels , b
         else:
             datasets = tf.data.Dataset.from_tensor_slices((data, labels))
         print(f"datasets:{datasets.take(1)}")
-
         #visualize_data(datasets, oversample = True)
-
         # Step 2 : Create sliding window
-        dataset = sliding_window(datasets, window_size=window_size, overlap=overlap)
+        dataset = sliding_window(datasets, window_size=window_size, overlap=overlap, labeling_mode=labeling_mode)
 
         # Filter out window with label = 0:
-        dataset = dataset.filter(lambda _, label: label > 0)
+        if labeling_mode == 'S2L':
+            dataset = dataset.filter(lambda _, label: label > 0)
+        elif labeling_mode == "S2S":
+            dataset = dataset.filter(lambda _, label: tf.reduce_all(label > 0))
 
         # Step 3 : since previous steps are deterministic, caching is done before preprocessing
         if cache:
@@ -117,9 +108,9 @@ def prepare(ds_train, ds_val, ds_test, train_labels, val_labels, test_labels , b
         return dataset
 
     # Prepare datasets
-    ds_train = prepare_dataset(ds_train, train_labels, batch_size, cache = True, debug=True)
-    ds_val = prepare_dataset(ds_val, val_labels, batch_size, cache = True, is_training=False)
-    ds_test = prepare_dataset(ds_test, test_labels, batch_size,cache = True, is_training=False)
+    ds_train = prepare_dataset(ds_train, train_labels, batch_size, cache = True, debug=True, labeling_mode=labeling_mode)
+    ds_val = prepare_dataset(ds_val, val_labels, batch_size, cache = True, is_training=False,labeling_mode=labeling_mode)
+    ds_test = prepare_dataset(ds_test, test_labels, batch_size,cache = True, is_training=False,labeling_mode=labeling_mode)
 
     ds_train = remap_labels(ds_train)
     ds_val = remap_labels(ds_val)

@@ -6,14 +6,26 @@ import wandb
 
 @gin.configurable
 class Trainer(object):
-    def __init__(self, model, ds_train, ds_val, run_paths, batch_size, total_epochs):
+    def __init__(self, model, ds_train, ds_val, run_paths, batch_size, total_epochs,use_polyloss=False, poly_loss_alpha=2, use_rdrop=False, rdrop_alpha=0.1 ,labeling_mode= 'S2L'):
+
+        self.use_polyloss = use_polyloss
+        self.poly_loss_alpha = poly_loss_alpha
+        self.use_rdrop = use_rdrop
+        self.rdrop_alpha = rdrop_alpha
+        self.labeling_mode = labeling_mode
 
         lr_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(
                                                                     initial_learning_rate=0.001,
                                                                     decay_steps=total_epochs,
-                                                                    end_learning_rate=0.0001,
+                                                                    end_learning_rate=0.0004,
                                                                     power=2  # Power=1.0 indicates linear decay, and power=2.0 indicates squared decay.
                                                                     )
+        # lr_scheduler = tf.keras.optimizers.schedules.CosineDecay(
+        #     initial_learning_rate=0.0004,  # Small enough to stabilize training
+        #     decay_steps=total_epochs * steps_per_epoch,  # Total number of steps (epochs × batches per epoch)
+        #     alpha=0.05  # Final LR will be 5% of initial LR
+        # )
+
         self.optimizer = tf.keras.optimizers.Adam(lr_scheduler)
         #self.optimizer = tf.keras.optimizers.SGD(learning_rate=lr_scheduler, momentum=0.9)
         #self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
@@ -22,9 +34,17 @@ class Trainer(object):
         self.checkpoint_manager = tf.train.CheckpointManager(self.checkpoint,
                                                              directory=run_paths["path_ckpts_train"],
                                                              max_to_keep = 1)
-        # Loss objective
-        self.loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False) # from_logits=False: output has already been processed through the sigmoid activation function.
+        # Loss selection
+        if self.use_polyloss:
+            def poly_loss(y_true, y_pred):
+                cross_entropy_loss = tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred)
+                prob = tf.reduce_max(y_pred, axis=-1)
+                poly_term = self.poly_loss_alpha * (1 - prob) ** 2
+                return cross_entropy_loss + poly_term
 
+            self.loss_object = poly_loss
+        else:
+            self.loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
 
         # Metrics
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
@@ -48,26 +68,50 @@ class Trainer(object):
        # self.class_weight_tensor = tf.constant([self.class_weights[i] for i in range(len(self.class_weights))],
        #                                    dtype=tf.float32)
 
+    def compute_rdrop_loss(self, logits1, logits2):
+        """
+        Compute the R-Drop loss as KL divergence between two logits.
+        """
+        kl_loss = tf.keras.losses.KLDivergence(reduction=tf.keras.losses.Reduction.NONE)
+        kl_div = kl_loss(logits1, logits2) + kl_loss(logits2, logits1)
+        return tf.reduce_mean(kl_div)
+
     @tf.function
     def train_step(self, data, labels):
+        # Reshape labels to match the output shape of the model
+        if self.labeling_mode == 'S2S':
+            labels = tf.reshape(labels, (tf.shape(data)[0], tf.shape(data)[1]))  # Shape: (batch_size, time_steps)
 
         #class_weights = tf.gather(self.class_weight_tensor, labels)
         #sample_weights = tf.cast(labels, dtype=tf.float32) * class_weights
         # sample_weights = tf.cast(labels > 0, dtype=tf.float32)
 
         with tf.GradientTape() as tape:
-            # training=True is only needed if there are layers with different
-            # behavior during training versus inference (e.g. Dropout).
-            predictions = self.model(data, training=True)
-            loss = self.loss_object(labels, predictions)
-        gradients = tape.gradient(loss, self.model.trainable_variables)
+            # First forward pass
+            logits1 = self.model(data, training=True)
+            # Second forward pass (for R-Drop consistency)
+            logits2 = self.model(data, training=True) if self.use_rdrop else logits1
+
+            # Calculate the primary loss (e.g., cross-entropy or PolyLoss)
+            primary_loss = self.loss_object(labels, logits1)
+            total_loss = primary_loss
+
+            # Add R-Drop regularization loss if enabled
+            if self.use_rdrop:
+                rdrop_loss = self.compute_rdrop_loss(logits1, logits2)
+                total_loss += self.rdrop_alpha * rdrop_loss
+
+        gradients = tape.gradient(total_loss, self.model.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
 
-        self.train_loss(loss)
-        self.train_accuracy(labels, predictions)
+        self.train_loss(total_loss)
+        self.train_accuracy(labels, logits1)
 
     @tf.function
     def validation_step(self, data, labels):
+        # Reshape labels to match the output shape of the model
+        if self.labeling_mode == 'S2S':
+            labels = tf.reshape(labels, (tf.shape(data)[0], tf.shape(data)[1]))  # Shape: (batch_size, time_steps)
         # training=False is only needed if there are layers with different
         # behavior during training versus inference (e.g. Dropout).
         # class_weights = tf.gather(self.class_weight_tensor, labels)

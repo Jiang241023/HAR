@@ -9,6 +9,7 @@ from utils import utils_params, utils_misc
 from models.architectures import lstm_like, gru_like, transformer_like
 import tensorflow as tf
 import random
+
 import numpy as np
 import os
 
@@ -48,7 +49,7 @@ def main(argv):
     # utils_misc.set_loggers(run_paths_3['path_logs_train'], logging.INFO)
 
     # gin-config
-    gin.parse_config_files_and_bindings([r'E:\DL_LAB_HAPT\dl-lab-24w-team04-har\Human_Activity_Recognition\configs\config.gin'], [])
+    gin.parse_config_files_and_bindings([r'E:\DL_LAB_HAPT\HAR\Human_Activity_Recognition\configs\config.gin'], [])
     # utils_params.save_config(run_paths_1['path_gin'], gin.config_str())
     utils_params.save_config(run_paths_2['path_gin'], gin.config_str())
     # utils_params.save_config(run_paths_3['path_gin'], gin.config_str())

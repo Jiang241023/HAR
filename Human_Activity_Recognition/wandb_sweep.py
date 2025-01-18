@@ -104,7 +104,6 @@ def train_func():
         # Log the test accuracy to WandB
         wandb.log({'evaluation_accuracy': accuracy})
 
-# model_types = ['lstm_like', 'vgg_like', 'inception_v2_like']
 model_types = ['lstm_like']
 
 for model in model_types:
